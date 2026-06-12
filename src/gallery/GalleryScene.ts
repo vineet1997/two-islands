@@ -14,12 +14,13 @@ const RADIUS = 10;
 /** the 22-card set wraps twice around the sphere for phantom-style density */
 const INSTANCES = 2;
 const ROWS = [
-  { lat: 26 * DEG, count: 7, offset: 0.5 },
+  { lat: 23 * DEG, count: 7, offset: 0.5 },
   { lat: 0 * DEG, count: 8, offset: 0 },
-  { lat: -26 * DEG, count: 7, offset: 0.5 },
+  { lat: -23 * DEG, count: 7, offset: 0.5 },
 ];
-const PITCH_LIMIT = 28 * DEG;
-const sizeFor = (kind: string) => (kind === "moment" ? 3.7 : 3.4);
+const PITCH_LIMIT = 25 * DEG;
+/** uniform card height — consistent rhythm is most of what reads as "polish" */
+const CARD_H = 3.3;
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -49,6 +50,9 @@ void main() {
   float g = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
   vec3 col = mix(tex.rgb, vec3(g * 0.55), uDim);
   col *= 1.0 - uDim * 0.45;
+  // hairline frame, phantom-style
+  float edge = 1.0 - smoothstep(-aa, aa, dist + 0.028);
+  col = mix(col, vec3(0.91, 0.90, 0.87), (alpha - edge) * 0.16);
   gl_FragColor = vec4(col, alpha * uOpacity);
   if (gl_FragColor.a < 0.003) discard;
 }`;
@@ -126,11 +130,12 @@ export class Gallery {
       this.webglOk = false;
       return;
     }
-    this.renderer.setClearColor(0x0b0e0d, 1);
-    this.camera = new THREE.PerspectiveCamera(65, 1, 0.05, 60);
+    this.renderer.setClearColor(0x0a0f0e, 1);
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.05, 60);
     this.camera.rotation.order = "YXZ";
 
     this.buildCards();
+    this.buildGrid();
     this.resize();
     window.addEventListener("resize", () => this.resize());
     this.bindInput();
@@ -148,7 +153,7 @@ export class Gallery {
       const lat = row.lat;
       const photo = m.cover ? PHOTOS[m.cover] : null;
       const ratio = m.kind === "chapter" ? 0.75 : photo ? photo.ratio : 0.75;
-      const h = sizeFor(m.kind);
+      const h = CARD_H;
       const w = h * ratio;
 
       const pos = new THREE.Vector3(
@@ -167,7 +172,7 @@ export class Gallery {
           uOpacity: { value: 0 },
           uDim: { value: 0 },
           uSize: { value: new THREE.Vector2(w, h) },
-          uRadius: { value: 0.09 },
+          uRadius: { value: 0.045 },
         },
       });
       const mesh = new THREE.Mesh(geo, mat);
@@ -194,12 +199,52 @@ export class Gallery {
       } else {
         this.texLoader.load(img(m.cover, "tile"), (t) => {
           t.colorSpace = THREE.NoColorSpace;
-          t.anisotropy = 4;
+          t.anisotropy = 8;
           mat.uniforms.map.value = t;
         });
       }
       this.buildLabel(card);
     }
+  }
+
+  /** hairline lattice behind the cards — the engineered armature phantom has */
+  private gridMat!: THREE.LineBasicMaterial;
+  private buildGrid() {
+    this.gridMat = new THREE.LineBasicMaterial({
+      color: 0xe8e6df, transparent: true, opacity: 0,
+    });
+    const group = new THREE.Group();
+    const R = RADIUS + 0.45;
+    const circle = (latDeg: number) => {
+      const lat = latDeg * DEG;
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= 160; i++) {
+        const lon = (i / 160) * Math.PI * 2;
+        pts.push(new THREE.Vector3(
+          R * Math.cos(lat) * Math.sin(lon),
+          R * Math.sin(lat),
+          -R * Math.cos(lat) * Math.cos(lon)
+        ));
+      }
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.gridMat));
+    };
+    // latitude rules at the cell boundaries between rows
+    [-34.5, -11.5, 11.5, 34.5].forEach(circle);
+    // longitude rules at equator cell boundaries
+    for (let k = 0; k < 16; k++) {
+      const lon = ((k + 0.5) / 16) * Math.PI * 2;
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= 24; i++) {
+        const lat = (-37 + (i / 24) * 74) * DEG;
+        pts.push(new THREE.Vector3(
+          R * Math.cos(lat) * Math.sin(lon),
+          R * Math.sin(lat),
+          -R * Math.cos(lat) * Math.cos(lon)
+        ));
+      }
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.gridMat));
+    }
+    this.scene.add(group);
   }
 
   private placeholderTexture(): THREE.Texture {
@@ -214,37 +259,53 @@ export class Gallery {
   }
 
   private chapterTexture(m: Moment): THREE.CanvasTexture {
-    const W = 768, H = 1024;
+    // 2x resolution so the type renders crisp on large screens
+    const W = 1536, H = 2048;
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     const ctx = c.getContext("2d")!;
-    ctx.fillStyle = "#11161a";
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#10161a");
+    g.addColorStop(1, "#0a0f12");
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = "rgba(232,230,223,0.22)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(24, 24, W - 48, H - 48);
-    // dotted motif
-    ctx.fillStyle = "rgba(232,230,223,0.3)";
-    for (let y = 0; y < 6; y++)
-      for (let x = 0; x < 8; x++)
-        ctx.fillRect(W - 220 + x * 22, 70 + y * 22, 3, 3);
-    // accent line
-    ctx.fillStyle = m.accent;
-    ctx.fillRect(70, H * 0.36, 64, 4);
-    // title stacked
-    ctx.fillStyle = "#e8e6df";
-    ctx.font = "700 108px 'Space Grotesk', sans-serif";
+    ctx.strokeStyle = "rgba(232,230,223,0.12)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(12, 12, W - 24, H - 24);
+
+    const ML = 118; // left margin
+    // index, top-left, mono
     ctx.textBaseline = "top";
+    ctx.font = "400 46px 'Space Mono', monospace";
+    ctx.fillStyle = "rgba(232,230,223,0.45)";
+    ctx.fillText(m.id === "ch-maldives" ? "CH. 01" : "CH. 02", ML, 116);
+    // dot matrix, top-right
+    ctx.fillStyle = "rgba(232,230,223,0.22)";
+    for (let y = 0; y < 6; y++)
+      for (let x = 0; x < 9; x++)
+        ctx.fillRect(W - 118 - 8 * 42 + x * 42, 116 + y * 42, 6, 6);
+    // accent rule
+    ctx.fillStyle = m.accent;
+    ctx.fillRect(ML, H * 0.40 - 64, 150, 8);
+    // huge stacked title
+    ctx.fillStyle = "#e8e6df";
+    ctx.font = "700 252px 'Space Grotesk', sans-serif";
     const words = m.title.split(" ");
-    words.forEach((wrd, i) => ctx.fillText(wrd, 64, H * 0.40 + i * 112));
-    ctx.font = "400 30px 'Space Mono', monospace";
-    ctx.fillStyle = "rgba(232,230,223,0.6)";
-    ctx.fillText(m.sub ?? "", 70, H * 0.40 + words.length * 112 + 36);
-    ctx.fillText(m.dateLabel, 70, H - 110);
+    words.forEach((wrd, i) => ctx.fillText(wrd, ML - 10, H * 0.40 + i * 252));
+    // coordinates under the title
+    ctx.font = "400 52px 'Space Mono', monospace";
+    ctx.fillStyle = "rgba(232,230,223,0.55)";
+    ctx.fillText(m.sub ?? "", ML, H * 0.40 + words.length * 252 + 88);
+    // footer: date left, ratio right
+    ctx.fillText(m.dateLabel, ML, H - 200);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(232,230,223,0.35)";
+    ctx.fillText(m.id === "ch-maldives" ? "01 — 02" : "02 — 02", W - ML, H - 200);
+    ctx.textAlign = "left";
+
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.NoColorSpace;
-    t.anisotropy = 4;
-    m.id && (t.name = m.id);
+    t.anisotropy = 8;
     return t;
   }
 
@@ -293,11 +354,12 @@ export class Gallery {
     const top = document.createElement("div");
     top.className = "lbl";
     top.innerHTML = `<div class="lbl-title">${m.title}</div>`;
+    if (m.kind === "mood") top.classList.add("lbl-mood");
     const bot = document.createElement("div");
     bot.className = "lbl";
     const chips = m.kind === "moment"
-      ? m.tags.map((t) => `<span class="chip" style="border-color:${m.accent}55;color:${m.accent}">${t}</span>`).join("")
-      : `<span class="chip">MOOD</span>`;
+      ? m.tags.map((t) => `<span class="chip">${t}</span>`).join("")
+      : "";
     bot.innerHTML = `<div class="lbl-meta">${chips}<span class="date">${m.dateLabel}</span></div>`;
     this.labelLayer.append(top, bot);
     card.lblTop = top;
@@ -314,8 +376,9 @@ export class Gallery {
       if (!card.lblTop || !card.lblBot) continue;
       const dir = card.basePos.clone().normalize();
       const cos = dir.dot(fwd);
-      let o = clamp((cos - 0.45) / 0.3, 0, 1);
+      let o = clamp((cos - 0.55) / 0.28, 0, 1);
       o *= (card.mesh.material.uniforms.uOpacity.value as number);
+      if (card.m.kind === "mood") o *= 0.6;
       if (card.dimmed) o *= 0.15;
       if (o <= 0.01) {
         card.lblTop.style.opacity = "0";
@@ -331,10 +394,11 @@ export class Gallery {
       v.set((-card.w / 2) * s, (-card.h / 2) * s, 0).applyMatrix4(card.mesh.matrixWorld).project(this.camera);
       const bx = ((v.x + 1) / 2) * W;
       const by = ((1 - v.y) / 2) * H;
-      card.lblTop.style.opacity = String(o);
-      card.lblBot.style.opacity = String(o);
-      card.lblTop.style.transform = `translate(${tx.toFixed(1)}px, ${(ty - 18).toFixed(1)}px)`;
-      card.lblBot.style.transform = `translate(${bx.toFixed(1)}px, ${(by + 5).toFixed(1)}px)`;
+      card.lblTop.style.opacity = o.toFixed(2);
+      card.lblBot.style.opacity = o.toFixed(2);
+      // integer-snap so the mono type stays crisp
+      card.lblTop.style.transform = `translate(${Math.round(tx)}px, ${Math.round(ty - 20)}px)`;
+      card.lblBot.style.transform = `translate(${Math.round(bx)}px, ${Math.round(by + 7)}px)`;
     }
   }
 
@@ -367,8 +431,8 @@ export class Gallery {
       this.lastX = e.clientX;
       this.lastY = e.clientY;
       this.moved += Math.abs(dx) + Math.abs(dy);
-      const kx = 2.2 / el.clientWidth;
-      const ky = 1.7 / el.clientHeight;
+      const kx = 1.7 / el.clientWidth;
+      const ky = 1.3 / el.clientHeight;
       const dyaw = dx * kx;
       const dpitch = dy * ky;
       this.targetYaw += dyaw;
@@ -400,7 +464,7 @@ export class Gallery {
       if (!this.interactive) return;
       e.preventDefault();
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-      this.targetYaw += d * 0.00042;
+      this.targetYaw += d * 0.00032;
       this.lastInteract = performance.now();
     }, { passive: false });
   }
@@ -434,7 +498,7 @@ export class Gallery {
       this.velPitch *= decay;
       // idle drift
       if (!REDUCED && performance.now() - this.lastInteract > 3500)
-        this.targetYaw += 0.038 * dt;
+        this.targetYaw += 0.024 * dt;
     }
 
     const k = 1 - Math.exp(-dt * 5.2);
@@ -472,7 +536,7 @@ export class Gallery {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const aspect = w / h;
-    this.camera.fov = 65;
+    this.camera.fov = 50;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -513,6 +577,7 @@ export class Gallery {
       });
     });
     gsap.delayedCall(0.7, () => this.setInteractive(true));
+    gsap.to(this.gridMat, { opacity: 0.07, duration: 2.4, delay: 0.5, ease: "power2.inOut" });
   }
 
   setFilter(tag: string | null) {
@@ -589,6 +654,7 @@ export class Gallery {
           value: 0, duration: dur * 0.45, ease: "power2.in",
         }, dur * 0.25);
       }
+      tl.to(this.gridMat, { opacity: 0, duration: dur * 0.4 }, dur * 0.25);
     });
   }
 
@@ -610,6 +676,7 @@ export class Gallery {
       if (other !== card) other.mesh.material.uniforms.uOpacity.value = 0;
     }
     card.mesh.scale.setScalar(1);
+    this.gridMat.opacity = 0;
     this.revealed = true;
     this.renderer.render(this.scene, this.camera);
   }
@@ -635,9 +702,10 @@ export class Gallery {
       for (const other of this.cards) {
         if (other === card) continue;
         tl.to(other.mesh.material.uniforms.uOpacity, {
-          value: other.dimmed ? 1 : 1, duration: dur * 0.5, ease: "power2.out",
+          value: 1, duration: dur * 0.5, ease: "power2.out",
         }, dur * 0.35);
       }
+      tl.to(this.gridMat, { opacity: 0.07, duration: dur * 0.5 }, dur * 0.35);
     });
   }
 }

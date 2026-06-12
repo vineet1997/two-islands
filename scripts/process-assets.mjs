@@ -29,7 +29,7 @@ const manifest = JSON.parse(
 );
 
 const SIZES = [
-  { suffix: "tile", width: 640, quality: 72 },
+  { suffix: "tile", width: 880, quality: 70 },
   { suffix: "page", width: 1100, quality: 74 },
   { suffix: "hero", width: 1680, quality: 70 },
 ];

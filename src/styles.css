@@ -1,6 +1,6 @@
 /* ───────────────────────── TWO ISLANDS — design system ───────────────────── */
 :root {
-  --bg: #0b0e0d;
+  --bg: #0a0f0e;
   --bg-soft: #11161a;
   --ink: #e8e6df;
   --ink-dim: #8a8d86;
@@ -32,9 +32,22 @@ body {
 #gl.dragging { cursor: grabbing; }
 #gl.over { cursor: pointer; }
 .vignette {
-  position: absolute; inset: 0; pointer-events: none;
+  position: absolute; inset: 0; pointer-events: none; z-index: 3;
   background:
-    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(4, 6, 6, 0.55) 100%);
+    radial-gradient(120% 92% at 50% 46%, transparent 50%, rgba(3, 6, 6, 0.7) 100%),
+    radial-gradient(55% 38% at 82% 100%, rgba(232, 184, 96, 0.05), transparent 70%),
+    radial-gradient(50% 36% at 12% 0%, rgba(95, 199, 207, 0.045), transparent 70%);
+}
+.scrim-top, .scrim-bottom {
+  position: absolute; left: 0; right: 0; pointer-events: none; z-index: 3;
+}
+.scrim-top {
+  top: 0; height: 17%;
+  background: linear-gradient(to bottom, rgba(6, 9, 9, 0.88), rgba(6, 9, 9, 0.4) 45%, transparent);
+}
+.scrim-bottom {
+  bottom: 0; height: 19%;
+  background: linear-gradient(to top, rgba(6, 9, 9, 0.9), rgba(6, 9, 9, 0.42) 45%, transparent);
 }
 .grain {
   position: fixed; inset: -50%; pointer-events: none; z-index: 60;
@@ -60,16 +73,17 @@ body {
   white-space: nowrap; transition: none;
 }
 .lbl-title {
-  font-size: 11px; letter-spacing: 0.14em; color: var(--ink);
+  font-size: 10px; letter-spacing: 0.16em; color: #d8d6cf;
   text-transform: uppercase;
 }
-.lbl-meta { display: flex; gap: 6px; align-items: center; }
+.lbl-mood .lbl-title { color: #8a8d86; }
+.lbl-meta { display: flex; gap: 5px; align-items: center; }
 .lbl-meta .chip {
-  font-size: 8.5px; letter-spacing: 0.12em; padding: 2px 6px;
-  border: 1px solid var(--hairline); border-radius: 999px;
-  color: var(--ink-dim); background: rgba(11, 14, 13, 0.55);
+  font-size: 8px; letter-spacing: 0.12em; padding: 2px 6px 1px;
+  border: 1px solid rgba(232, 230, 223, 0.16); border-radius: 999px;
+  color: #848781; background: rgba(8, 11, 11, 0.5);
 }
-.lbl-meta .date { font-size: 9px; letter-spacing: 0.14em; color: var(--ink-dim); }
+.lbl-meta .date { font-size: 8.5px; letter-spacing: 0.14em; color: #6f726c; }
 .lbl.dimmed { opacity: 0.15 !important; }
 
 /* ───────────────────────── chrome ───────────────────── */
@@ -293,11 +307,13 @@ figcaption, .cap {
   .say-hello { padding: 11px 18px; font-size: 13px; }
   .logo { top: 18px; left: 18px; }
   .masthead { top: 16px; right: 18px; }
-  .sound-toggle { top: auto; bottom: 88px; left: auto; right: 18px; transform: none; }
   .navpill { bottom: 18px; }
   .view-toggle { bottom: 18px; left: 18px; }
-  .filter-wrap { bottom: 84px; right: auto; left: 50%; transform: translateX(-50%); flex-direction: column-reverse; }
-  .filter-chips { justify-content: center; max-width: 92vw; }
+  .filter-wrap { bottom: 18px; right: 14px; }
+  .filter-chips {
+    position: absolute; bottom: calc(100% + 12px); right: 0;
+    justify-content: flex-end; max-width: 92vw; width: max-content;
+  }
   .filter-btn { padding: 10px 20px; }
   .page-head { padding: 0 18px 32px; }
   .page-body { padding: 64px 18px 30px; gap: 72px; }
