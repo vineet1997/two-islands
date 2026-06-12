@@ -1,7 +1,10 @@
 /**
- * The spherical gallery — cards mounted on the inside of a sphere, camera at
- * the center. Drag rotates the view with Lenis-style exponential easing and
- * release inertia. Click flies the card into the camera (the page transition).
+ * The gallery wall — phantom.land's actual model: a CYLINDER viewed from
+ * inside. Horizontal drag rotates it, vertical drag/wheel pans it up and
+ * down; the camera never pitches. That projection is what gives phantom its
+ * signature look: straight vertical grid lines, gently curving horizontal
+ * ones, and cards that never roll — the lattice stays disciplined at every
+ * screen position. Cards are curved cylinder patches in strict columns.
  */
 import * as THREE from "three";
 import { gsap } from "gsap";
@@ -11,39 +14,34 @@ import { PHOTOS } from "../data/photos";
 
 const DEG = Math.PI / 180;
 const RADIUS = 10;
-/** the 22-card set wraps twice around the sphere for phantom-style density */
+/** the 22-card set wraps twice around the cylinder for phantom-style density */
 const INSTANCES = 2;
-const ROWS = [
-  { lat: 23 * DEG, count: 7, offset: 0.5 },
-  { lat: 0 * DEG, count: 8, offset: 0 },
-  { lat: -23 * DEG, count: 7, offset: 0.5 },
-];
-const PITCH_LIMIT = 25 * DEG;
-/** Cards are curved patches of the sphere with a fixed ANGULAR height, so they
- *  sit inside the grid cells exactly — at every screen position and viewport.
- *  (Flat planes spill across the curved grid lines near the screen edges.) */
-const D_LAT = 17 * DEG;
+/** strict aligned columns (no brick stagger) — 8 per hemisphere; rows with
+ *  fewer cards simply leave empty cells, like phantom's grid */
+const COLS = 8;
+const ROW_PITCH = 4.4;
+const ROWS_Y = [ROW_PITCH, 0, -ROW_PITCH]; // slot.row 0/1/2 → top/mid/bottom
+const CARD_H = 3.1;
+const Y_LIMIT = ROW_PITCH + 0.4;
 const BASE_FOV = 50;
+const REDUCED = typeof matchMedia !== "undefined" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const sphPoint = (r: number, lat: number, lon: number) =>
-  new THREE.Vector3(
-    r * Math.cos(lat) * Math.sin(lon),
-    r * Math.sin(lat),
-    -r * Math.cos(lat) * Math.cos(lon)
-  );
+const cylPoint = (lon: number, y: number, r = RADIUS) =>
+  new THREE.Vector3(r * Math.sin(lon), y, -r * Math.cos(lon));
 
-/** spherical patch centered on (latC, lonC); vertices local to the center */
-function patchGeometry(latC: number, lonC: number, dLat: number, dLon: number) {
+/** cylinder patch centered on (lonC, yC); vertices local to the center */
+function patchGeometry(lonC: number, yC: number, dLon: number, h: number) {
   const SEG = 12;
-  const center = sphPoint(RADIUS, latC, lonC);
+  const center = cylPoint(lonC, yC);
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
   for (let iy = 0; iy <= SEG; iy++) {
-    const lat = latC + dLat / 2 - (iy / SEG) * dLat;
+    const y = yC + h / 2 - (iy / SEG) * h;
     for (let ix = 0; ix <= SEG; ix++) {
       const lon = lonC - dLon / 2 + (ix / SEG) * dLon;
-      const p = sphPoint(RADIUS, lat, lon).sub(center);
+      const p = cylPoint(lon, y).sub(center);
       positions.push(p.x, p.y, p.z);
       uvs.push(ix / SEG, 1 - iy / SEG);
     }
@@ -60,8 +58,6 @@ function patchGeometry(latC: number, lonC: number, dLat: number, dLon: number) {
   geo.setIndex(indices);
   return { geo, center };
 }
-const REDUCED = typeof matchMedia !== "undefined" &&
-  matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const VERT = /* glsl */ `
 varying vec2 vUv;
@@ -104,8 +100,8 @@ interface Card {
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   basePos: THREE.Vector3;
   lon: number;
-  lat: number;
-  w: number; // arc width/height — used for corner radius + cover math
+  yPos: number;
+  w: number; // chord width / height — corner radius + cover math
   h: number;
   cornerTL: THREE.Vector3; // local-space corners for label projection
   cornerBL: THREE.Vector3;
@@ -130,11 +126,11 @@ export class Gallery {
   private texLoader: THREE.TextureLoader;
 
   private yaw = 0;
-  private pitch = 0;
+  private yPan = 0;
   private targetYaw = 0;
-  private targetPitch = 0;
+  private targetY = 0;
   private velYaw = 0;
-  private velPitch = 0;
+  private velY = 0;
 
   private dragging = false;
   private downX = 0;
@@ -153,7 +149,7 @@ export class Gallery {
   private needRaycast = false;
   private fovScale = 1;
   private prevYaw = 0;
-  private prevPitch = 0;
+  private prevY = 0;
   private frontChapter = "";
   private frame = 0;
   private momentIndex = new Map<string, string>();
@@ -200,19 +196,15 @@ export class Gallery {
   private buildCards() {
     for (let inst = 0; inst < INSTANCES; inst++)
     for (const m of this.moments) {
-      const row = ROWS[m.slot.row];
-      const lon =
-        ((m.slot.col + row.offset) / row.count) * Math.PI + inst * Math.PI;
-      const lat = row.lat;
+      const lon = (m.slot.col / COLS) * Math.PI + inst * Math.PI;
+      const yPos = ROWS_Y[m.slot.row];
       const photo = m.cover ? PHOTOS[m.cover] : null;
       const ratio = m.kind === "chapter" ? 0.75 : photo ? photo.ratio : 0.75;
-      // angular box sized to keep the photo's aspect in arc length
-      const dLat = D_LAT;
-      const dLon = (ratio * dLat) / Math.cos(lat);
-      const h = RADIUS * dLat;
-      const w = RADIUS * dLon * Math.cos(lat);
+      const h = CARD_H;
+      const w = h * ratio;
+      const dLon = 2 * Math.asin(w / 2 / RADIUS);
 
-      const { geo, center } = patchGeometry(lat, lon, dLat, dLon);
+      const { geo, center } = patchGeometry(lon, yPos, dLon, h);
       const mat = new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
@@ -232,9 +224,9 @@ export class Gallery {
       this.scene.add(mesh);
 
       const card: Card = {
-        m, mesh, basePos: center.clone(), lon, lat, w, h, dimmed: false,
-        cornerTL: sphPoint(RADIUS, lat + dLat / 2, lon - dLon / 2).sub(center),
-        cornerBL: sphPoint(RADIUS, lat - dLat / 2, lon - dLon / 2).sub(center),
+        m, mesh, basePos: center.clone(), lon, yPos, w, h, dimmed: false,
+        cornerTL: cylPoint(lon - dLon / 2, yPos + h / 2).sub(center),
+        cornerBL: cylPoint(lon - dLon / 2, yPos - h / 2).sub(center),
       };
       mesh.userData.card = card;
       this.cards.push(card);
@@ -244,7 +236,6 @@ export class Gallery {
       if (m.kind === "chapter") {
         mat.uniforms.map.value = this.chapterTexture(m);
       } else if (m.liveVideo) {
-        // poster first; upgrade to a live VideoTexture once it can play
         this.texLoader.load(img(m.cover, "tile"), (t) => {
           t.colorSpace = THREE.NoColorSpace;
           if (!card.video) mat.uniforms.map.value = t;
@@ -261,41 +252,27 @@ export class Gallery {
     }
   }
 
-  /** hairline lattice behind the cards — the engineered armature phantom has */
+  /** hairline lattice — straight verticals + ring horizontals, like phantom */
   private gridMat!: THREE.LineBasicMaterial;
   private buildGrid() {
     this.gridMat = new THREE.LineBasicMaterial({
       color: 0xe8e6df, transparent: true, opacity: 0,
     });
     const group = new THREE.Group();
-    const R = RADIUS + 0.45;
-    const circle = (latDeg: number) => {
-      const lat = latDeg * DEG;
+    const R = RADIUS + 0.4;
+    const TOP = ROW_PITCH * 1.62;
+    // horizontal rings at the row boundaries
+    for (const y of [-TOP, -ROW_PITCH / 2 - 1.1, ROW_PITCH / 2 + 1.1, TOP]) {
       const pts: THREE.Vector3[] = [];
-      for (let i = 0; i <= 160; i++) {
-        const lon = (i / 160) * Math.PI * 2;
-        pts.push(new THREE.Vector3(
-          R * Math.cos(lat) * Math.sin(lon),
-          R * Math.sin(lat),
-          -R * Math.cos(lat) * Math.cos(lon)
-        ));
-      }
+      for (let i = 0; i <= 160; i++)
+        pts.push(cylPoint((i / 160) * Math.PI * 2, y, R));
       group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.gridMat));
-    };
-    // latitude rules at the cell boundaries between rows
-    [-34.5, -11.5, 11.5, 34.5].forEach(circle);
-    // longitude rules at equator cell boundaries
-    for (let k = 0; k < 16; k++) {
-      const lon = ((k + 0.5) / 16) * Math.PI * 2;
-      const pts: THREE.Vector3[] = [];
-      for (let i = 0; i <= 24; i++) {
-        const lat = (-37 + (i / 24) * 74) * DEG;
-        pts.push(new THREE.Vector3(
-          R * Math.cos(lat) * Math.sin(lon),
-          R * Math.sin(lat),
-          -R * Math.cos(lat) * Math.cos(lon)
-        ));
-      }
+    }
+    // straight vertical rules at the column boundaries
+    const totalCols = COLS * INSTANCES;
+    for (let k = 0; k < totalCols; k++) {
+      const lon = ((k + 0.5) / totalCols) * Math.PI * 2;
+      const pts = [cylPoint(lon, -TOP, R), cylPoint(lon, TOP, R)];
       group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), this.gridMat));
     }
     this.scene.add(group);
@@ -328,31 +305,24 @@ export class Gallery {
     ctx.lineWidth = 3;
     ctx.strokeRect(12, 12, W - 24, H - 24);
 
-    const INK = "#14181a";
     const ML = 118; // left margin
-    // index, top-left, mono
     ctx.textBaseline = "top";
     ctx.font = "400 46px 'Space Mono', monospace";
     ctx.fillStyle = "rgba(20,24,26,0.55)";
     ctx.fillText(m.id === "ch-maldives" ? "CH. 01" : "CH. 02", ML, 116);
-    // dot matrix, top-right
     ctx.fillStyle = "rgba(20,24,26,0.3)";
     for (let y = 0; y < 6; y++)
       for (let x = 0; x < 9; x++)
         ctx.fillRect(W - 118 - 8 * 42 + x * 42, 116 + y * 42, 6, 6);
-    // accent rule
     ctx.fillStyle = m.accent;
     ctx.fillRect(ML, H * 0.40 - 64, 150, 8);
-    // huge stacked title
-    ctx.fillStyle = INK;
+    ctx.fillStyle = "#14181a";
     ctx.font = "700 252px 'Space Grotesk', sans-serif";
     const words = m.title.split(" ");
     words.forEach((wrd, i) => ctx.fillText(wrd, ML - 10, H * 0.40 + i * 252));
-    // coordinates under the title
     ctx.font = "400 52px 'Space Mono', monospace";
     ctx.fillStyle = "rgba(20,24,26,0.6)";
     ctx.fillText(m.sub ?? "", ML, H * 0.40 + words.length * 252 + 88);
-    // footer: date left, index right
     ctx.fillText(m.dateLabel, ML, H - 200);
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(20,24,26,0.4)";
@@ -426,6 +396,12 @@ export class Gallery {
     card.lblBot = bot;
   }
 
+  /** horizontal facing factor — how directly a column faces the camera */
+  private facing(card: Card, fwd: THREE.Vector3): number {
+    const len = Math.hypot(card.basePos.x, card.basePos.z) || 1;
+    return (card.basePos.x / len) * fwd.x + (card.basePos.z / len) * fwd.z;
+  }
+
   private syncLabels() {
     const W = this.canvas.clientWidth;
     const H = this.canvas.clientHeight;
@@ -434,8 +410,7 @@ export class Gallery {
     const v = new THREE.Vector3();
     for (const card of this.cards) {
       if (!card.lblTop || !card.lblBot) continue;
-      const dir = card.basePos.clone().normalize();
-      const cos = dir.dot(fwd);
+      const cos = this.facing(card, fwd);
       let o = clamp((cos - 0.55) / 0.28, 0, 1);
       o *= (card.mesh.material.uniforms.uOpacity.value as number);
       if (card.m.kind === "mood") o *= 0.6;
@@ -446,11 +421,9 @@ export class Gallery {
         continue;
       }
       const s = card.mesh.scale.x;
-      // top-left corner, above card
       v.copy(card.cornerTL).multiplyScalar(s).add(card.mesh.position).project(this.camera);
       const tx = ((v.x + 1) / 2) * W;
       const ty = ((1 - v.y) / 2) * H;
-      // bottom-left corner
       v.copy(card.cornerBL).multiplyScalar(s).add(card.mesh.position).project(this.camera);
       const bx = ((v.x + 1) / 2) * W;
       const by = ((1 - v.y) / 2) * H;
@@ -476,7 +449,7 @@ export class Gallery {
       this.downT = performance.now();
       this.moved = 0;
       this.velYaw = 0;
-      this.velPitch = 0;
+      this.velY = 0;
       this.lastInteract = performance.now();
     });
     el.addEventListener("pointermove", (e) => {
@@ -492,13 +465,13 @@ export class Gallery {
       this.lastY = e.clientY;
       this.moved += Math.abs(dx) + Math.abs(dy);
       const kx = 1.7 / el.clientWidth;
-      const ky = 1.3 / el.clientHeight;
+      const ky = 9.5 / el.clientHeight; // world units per full-height drag
       const dyaw = dx * kx;
-      const dpitch = dy * ky;
+      const dpan = dy * ky;
       this.targetYaw += dyaw;
-      this.targetPitch = clamp(this.targetPitch + dpitch, -PITCH_LIMIT, PITCH_LIMIT);
+      this.targetY = clamp(this.targetY + dpan, -Y_LIMIT, Y_LIMIT);
       this.velYaw = this.velYaw * 0.7 + dyaw * 0.3;
-      this.velPitch = this.velPitch * 0.7 + dpitch * 0.3;
+      this.velY = this.velY * 0.7 + dpan * 0.3;
       this.lastInteract = performance.now();
     });
     const up = (e: PointerEvent) => {
@@ -509,7 +482,7 @@ export class Gallery {
       const dist = Math.abs(e.clientX - this.downX) + Math.abs(e.clientY - this.downY);
       if (dist < 8 && dt < 350) {
         this.velYaw = 0;
-        this.velPitch = 0;
+        this.velY = 0;
         const hit = this.raycastAt(e.clientX, e.clientY);
         if (hit && hit.m.kind === "moment" && !hit.dimmed) this.onCardClick?.(hit.m);
       }
@@ -520,11 +493,12 @@ export class Gallery {
       this.dragging = false;
       el.classList.remove("dragging");
     });
+    // phantom-style: the wheel pans the wall vertically, shift/trackpad-x rotates
     el.addEventListener("wheel", (e) => {
       if (!this.interactive) return;
       e.preventDefault();
-      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-      this.targetYaw += d * 0.00032;
+      this.targetY = clamp(this.targetY + e.deltaY * 0.004, -Y_LIMIT, Y_LIMIT);
+      this.targetYaw += e.deltaX * 0.0004;
       this.lastInteract = performance.now();
     }, { passive: false });
   }
@@ -552,10 +526,10 @@ export class Gallery {
 
     if (!this.dragging && this.interactive) {
       this.targetYaw += this.velYaw;
-      this.targetPitch = clamp(this.targetPitch + this.velPitch, -PITCH_LIMIT, PITCH_LIMIT);
+      this.targetY = clamp(this.targetY + this.velY, -Y_LIMIT, Y_LIMIT);
       const decay = Math.pow(0.93, dt * 60);
       this.velYaw *= decay;
-      this.velPitch *= decay;
+      this.velY *= decay;
       // idle drift
       if (!REDUCED && performance.now() - this.lastInteract > 3500)
         this.targetYaw += 0.024 * dt;
@@ -563,15 +537,16 @@ export class Gallery {
 
     const k = 1 - Math.exp(-dt * 5.2);
     this.yaw += (this.targetYaw - this.yaw) * k;
-    this.pitch += (this.targetPitch - this.pitch) * k;
-    this.camera.rotation.set(this.pitch, -this.yaw, 0);
+    this.yPan += (this.targetY - this.yPan) * k;
+    this.camera.rotation.set(0, -this.yaw, 0);
+    this.camera.position.set(0, this.yPan, 0);
 
     // velocity-driven dolly breath: the wall eases back while you move it
     const speed =
-      (Math.abs(this.yaw - this.prevYaw) + Math.abs(this.pitch - this.prevPitch) * 1.5) /
+      (Math.abs(this.yaw - this.prevYaw) + Math.abs(this.yPan - this.prevY) * 0.22) /
       Math.max(dt, 0.001);
     this.prevYaw = this.yaw;
-    this.prevPitch = this.pitch;
+    this.prevY = this.yPan;
     const fovTarget = this.interactive && !REDUCED
       ? clamp(1 + speed * 0.16, 1, 1.085)
       : 1;
@@ -590,7 +565,7 @@ export class Gallery {
       let bestCard: Card | null = null;
       for (const c of this.cards) {
         if (c.m.kind !== "chapter") continue;
-        const d = c.basePos.clone().normalize().dot(fwd);
+        const d = this.facing(c, fwd);
         if (d > best) { best = d; bestCard = c; }
       }
       if (bestCard && bestCard.m.id !== this.frontChapter) {
@@ -631,9 +606,8 @@ export class Gallery {
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    const aspect = w / h;
     this.camera.fov = BASE_FOV * this.fovScale;
-    this.camera.aspect = aspect;
+    this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.setSize(w, h, false);
@@ -662,7 +636,7 @@ export class Gallery {
     this.lastInteract = performance.now();
     const fwd = new THREE.Vector3(0, 0, -1);
     const sorted = [...this.cards].sort(
-      (a, b) => b.basePos.clone().normalize().dot(fwd) - a.basePos.clone().normalize().dot(fwd)
+      (a, b) => this.facing(b, fwd) - this.facing(a, fwd)
     );
     sorted.forEach((card, i) => {
       gsap.to(card.mesh.material.uniforms.uOpacity, {
@@ -673,7 +647,7 @@ export class Gallery {
       });
     });
     gsap.delayedCall(0.7, () => this.setInteractive(true));
-    gsap.to(this.gridMat, { opacity: 0.07, duration: 2.4, delay: 0.5, ease: "power2.inOut" });
+    gsap.to(this.gridMat, { opacity: 0.09, duration: 2.4, delay: 0.5, ease: "power2.inOut" });
   }
 
   setFilter(tag: string | null) {
@@ -696,19 +670,28 @@ export class Gallery {
     let best = cards[0];
     let bd = -2;
     for (const c of cards) {
-      const d = c.basePos.clone().normalize().dot(fwd);
+      const d = this.facing(c, fwd);
       if (d > bd) { bd = d; best = c; }
     }
     return best;
   }
 
   private coverDistance(card: Card): number {
-    // always computed at the resting FOV — the dolly breath settles to 1 during transitions
     const t = Math.tan((BASE_FOV * DEG) / 2);
     const dH = card.h / 2 / t;
     const dW = card.w / 2 / (t * this.camera.aspect);
     // tighter margin: curved patches bow away from the camera at their edges
     return Math.min(dH, dW) * 0.94;
+  }
+
+  /** where the card mesh must sit to exactly cover the viewport */
+  private coverPosition(card: Card): THREE.Vector3 {
+    const d = this.coverDistance(card);
+    return new THREE.Vector3(
+      Math.sin(card.lon) * d,
+      card.yPos,
+      -Math.cos(card.lon) * d
+    );
   }
 
   /** center the card, upgrade its texture, fly it into the camera. */
@@ -719,7 +702,7 @@ export class Gallery {
     this.setInteractive(false);
     this.labelLayer.classList.add("hidden");
     this.canvas.classList.remove("over");
-    this.velYaw = this.velPitch = 0;
+    this.velYaw = this.velY = 0;
 
     // upgrade texture for the close-up (photo cards only)
     if (!card.m.liveVideo && card.m.cover) {
@@ -729,19 +712,18 @@ export class Gallery {
       });
     }
 
-    const desiredYaw = this.yaw + wrapPi(-card.lon - this.yaw);
+    const desiredYaw = this.yaw + wrapPi(card.lon - this.yaw);
     const dur = REDUCED ? 0.01 : 1;
     return new Promise((resolve) => {
       const tl = gsap.timeline({ onComplete: resolve });
       tl.to(this, {
         yaw: desiredYaw, targetYaw: desiredYaw,
-        pitch: card.lat, targetPitch: card.lat,
+        yPan: card.yPos, targetY: card.yPos,
         duration: dur * 0.55, ease: "power3.inOut",
       });
-      const d = () => this.coverDistance(card);
-      const dir = card.basePos.clone().normalize();
+      const target = this.coverPosition(card);
       tl.to(card.mesh.position, {
-        x: () => dir.x * d(), y: () => dir.y * d(), z: () => dir.z * d(),
+        x: target.x, y: target.y, z: target.z,
         duration: dur * 0.7, ease: "expo.inOut",
       }, dur * 0.3);
       tl.to(card.mesh.scale, { x: 1, y: 1, z: 1, duration: dur * 0.3 }, dur * 0.3);
@@ -762,14 +744,14 @@ export class Gallery {
     this.flyCard = card;
     this.setInteractive(false);
     this.labelLayer.classList.add("hidden");
-    this.yaw = this.targetYaw = this.yaw + wrapPi(-card.lon - this.yaw);
-    this.pitch = this.targetPitch = card.lat;
+    this.yaw = this.targetYaw = this.yaw + wrapPi(card.lon - this.yaw);
+    this.yPan = this.targetY = card.yPos;
     this.fovScale = 1;
     this.camera.fov = BASE_FOV;
     this.camera.updateProjectionMatrix();
-    this.camera.rotation.set(this.pitch, -this.yaw, 0);
-    const dir = card.basePos.clone().normalize();
-    card.mesh.position.copy(dir.multiplyScalar(this.coverDistance(card)));
+    this.camera.rotation.set(0, -this.yaw, 0);
+    this.camera.position.set(0, this.yPan, 0);
+    card.mesh.position.copy(this.coverPosition(card));
     card.mesh.material.uniforms.uOpacity.value = 1;
     for (const other of this.cards) {
       other.mesh.scale.setScalar(1);
@@ -805,7 +787,7 @@ export class Gallery {
           value: 1, duration: dur * 0.5, ease: "power2.out",
         }, dur * 0.35);
       }
-      tl.to(this.gridMat, { opacity: 0.07, duration: dur * 0.5 }, dur * 0.35);
+      tl.to(this.gridMat, { opacity: 0.09, duration: dur * 0.5 }, dur * 0.35);
     });
   }
 }
