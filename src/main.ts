@@ -50,6 +50,15 @@ gallery.onCardClick = (m) => {
   location.hash = `#/m/${m.id}`;
 };
 
+gallery.onChapterChange = (m) => {
+  chrome.setChapter({
+    idx: m.id === "ch-maldives" ? "CH. 01" : "CH. 02",
+    name: m.title,
+    sub: `${m.dateLabel} · ${m.sub ?? ""}`,
+    accent: m.accent,
+  });
+};
+
 const parseHash = (): string | null => {
   const match = location.hash.match(/^#\/m\/([\w-]+)/);
   return match ? match[1] : null;

@@ -11,6 +11,7 @@ export interface ChromeHandlers {
 export interface Chrome {
   setView(mode: "sphere" | "list"): void;
   setNav(target: "moments" | "story"): void;
+  setChapter(opts: { idx: string; name: string; sub: string; accent: string }): void;
 }
 
 export function buildChrome(root: HTMLElement, h: ChromeHandlers): Chrome {
@@ -28,6 +29,10 @@ export function buildChrome(root: HTMLElement, h: ChromeHandlers): Chrome {
     <div class="navpill">
       <button data-nav="moments" class="active">Moments</button>
       <button data-nav="story">Story</button>
+    </div>
+    <div class="chapter-readout" aria-live="polite">
+      <div class="cr-main"></div>
+      <div class="cr-sub"></div>
     </div>
     <div class="view-toggle">
       <button data-view="sphere" class="active" title="Sphere view" aria-label="Sphere view">◉</button>
@@ -88,12 +93,28 @@ export function buildChrome(root: HTMLElement, h: ChromeHandlers): Chrome {
     })
   );
 
+  // chapter readout (crossfades when the sphere turns to the other island)
+  const readout = root.querySelector<HTMLElement>(".chapter-readout")!;
+  const crMain = readout.querySelector<HTMLElement>(".cr-main")!;
+  const crSub = readout.querySelector<HTMLElement>(".cr-sub")!;
+  let crTimer: ReturnType<typeof setTimeout> | undefined;
+
   return {
     setView(mode) {
       viewBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === mode));
     },
     setNav(target) {
       navBtns.forEach((b) => b.classList.toggle("active", b.dataset.nav === target));
+    },
+    setChapter({ idx, name, sub, accent }) {
+      clearTimeout(crTimer);
+      readout.style.opacity = "0";
+      crTimer = setTimeout(() => {
+        readout.style.setProperty("--cr-acc", accent);
+        crMain.innerHTML = `<b>${idx}</b>${name}`;
+        crSub.textContent = sub;
+        readout.style.opacity = "1";
+      }, 300);
     },
   };
 }

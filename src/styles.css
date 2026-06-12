@@ -1,6 +1,6 @@
 /* ───────────────────────── TWO ISLANDS — design system ───────────────────── */
 :root {
-  --bg: #0a0f0e;
+  --bg: #070a0a;
   --bg-soft: #11161a;
   --ink: #e8e6df;
   --ink-dim: #8a8d86;
@@ -43,12 +43,22 @@ body {
 }
 .scrim-top {
   top: 0; height: 17%;
-  background: linear-gradient(to bottom, rgba(6, 9, 9, 0.88), rgba(6, 9, 9, 0.4) 45%, transparent);
+  background: linear-gradient(to bottom, rgba(4, 6, 6, 0.9), rgba(4, 6, 6, 0.42) 45%, transparent);
 }
 .scrim-bottom {
   bottom: 0; height: 19%;
-  background: linear-gradient(to top, rgba(6, 9, 9, 0.9), rgba(6, 9, 9, 0.42) 45%, transparent);
+  background: linear-gradient(to top, rgba(4, 6, 6, 0.92), rgba(4, 6, 6, 0.44) 45%, transparent);
 }
+
+/* live chapter readout, bottom-left above the view toggle */
+.chapter-readout {
+  position: absolute; left: 26px; bottom: 78px;
+  font-family: var(--font-mono); letter-spacing: 0.16em; line-height: 1.9;
+  transition: opacity 0.3s ease;
+}
+.chapter-readout .cr-main { font-size: 11px; color: #f2f1ec; }
+.chapter-readout .cr-main b { color: var(--cr-acc, var(--lagoon)); font-weight: 400; margin-right: 8px; }
+.chapter-readout .cr-sub { font-size: 9px; color: var(--ink-dim); }
 .grain {
   position: fixed; inset: -50%; pointer-events: none; z-index: 60;
   opacity: 0.07;
@@ -73,10 +83,17 @@ body {
   white-space: nowrap; transition: none;
 }
 .lbl-title {
-  font-size: 10px; letter-spacing: 0.16em; color: #d8d6cf;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; color: #f2f1ec;
   text-transform: uppercase;
+  transition: color 0.25s;
 }
-.lbl-mood .lbl-title { color: #8a8d86; }
+.lbl-idx {
+  color: var(--acc, var(--amber)); font-weight: 400; margin-right: 9px;
+  font-size: 9.5px;
+}
+.lbl.hot .lbl-title { color: var(--acc, var(--amber)); }
+.lbl.hot .lbl-idx { color: #f2f1ec; }
+.lbl-mood .lbl-title { color: #7e817b; font-weight: 400; }
 .lbl-meta { display: flex; gap: 5px; align-items: center; }
 .lbl-meta .chip {
   font-size: 8px; letter-spacing: 0.12em; padding: 2px 6px 1px;
@@ -309,6 +326,8 @@ figcaption, .cap {
   .masthead { top: 16px; right: 18px; }
   .navpill { bottom: 18px; }
   .view-toggle { bottom: 18px; left: 18px; }
+  .chapter-readout { left: 18px; bottom: 72px; }
+  .chapter-readout .cr-sub { display: none; }
   .filter-wrap { bottom: 18px; right: 14px; }
   .filter-chips {
     position: absolute; bottom: calc(100% + 12px); right: 0;

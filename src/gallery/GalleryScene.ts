@@ -19,8 +19,10 @@ const ROWS = [
   { lat: -23 * DEG, count: 7, offset: 0.5 },
 ];
 const PITCH_LIMIT = 25 * DEG;
-/** uniform card height — consistent rhythm is most of what reads as "polish" */
-const CARD_H = 3.3;
+/** uniform card height — consistent rhythm is most of what reads as "polish";
+ *  sized so cards + labels clear the grid cell boundaries at ±11.5° */
+const CARD_H = 3.0;
+const BASE_FOV = 50;
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -76,6 +78,7 @@ interface Card {
 
 export class Gallery {
   onCardClick?: (m: Moment) => void;
+  onChapterChange?: (m: Moment) => void;
 
   private renderer!: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -109,6 +112,12 @@ export class Gallery {
   private hovered: Card | null = null;
   private pointerNdc = new THREE.Vector2(2, 2);
   private needRaycast = false;
+  private fovScale = 1;
+  private prevYaw = 0;
+  private prevPitch = 0;
+  private frontChapter = "";
+  private frame = 0;
+  private momentIndex = new Map<string, string>();
 
   webglOk = true;
 
@@ -130,9 +139,14 @@ export class Gallery {
       this.webglOk = false;
       return;
     }
-    this.renderer.setClearColor(0x0a0f0e, 1);
-    this.camera = new THREE.PerspectiveCamera(50, 1, 0.05, 60);
+    this.renderer.setClearColor(0x070a0a, 1);
+    this.camera = new THREE.PerspectiveCamera(BASE_FOV, 1, 0.05, 60);
     this.camera.rotation.order = "YXZ";
+
+    let n = 0;
+    for (const m of moments)
+      if (m.kind === "moment")
+        this.momentIndex.set(m.id, String(++n).padStart(2, "0"));
 
     this.buildCards();
     this.buildGrid();
@@ -264,23 +278,25 @@ export class Gallery {
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     const ctx = c.getContext("2d")!;
+    // cream plate — the two typographic cards punctuate the photo wall
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#10161a");
-    g.addColorStop(1, "#0a0f12");
+    g.addColorStop(0, "#ece8dc");
+    g.addColorStop(1, "#ddd7c6");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = "rgba(232,230,223,0.12)";
+    ctx.strokeStyle = "rgba(20,24,26,0.2)";
     ctx.lineWidth = 3;
     ctx.strokeRect(12, 12, W - 24, H - 24);
 
+    const INK = "#14181a";
     const ML = 118; // left margin
     // index, top-left, mono
     ctx.textBaseline = "top";
     ctx.font = "400 46px 'Space Mono', monospace";
-    ctx.fillStyle = "rgba(232,230,223,0.45)";
+    ctx.fillStyle = "rgba(20,24,26,0.55)";
     ctx.fillText(m.id === "ch-maldives" ? "CH. 01" : "CH. 02", ML, 116);
     // dot matrix, top-right
-    ctx.fillStyle = "rgba(232,230,223,0.22)";
+    ctx.fillStyle = "rgba(20,24,26,0.3)";
     for (let y = 0; y < 6; y++)
       for (let x = 0; x < 9; x++)
         ctx.fillRect(W - 118 - 8 * 42 + x * 42, 116 + y * 42, 6, 6);
@@ -288,18 +304,18 @@ export class Gallery {
     ctx.fillStyle = m.accent;
     ctx.fillRect(ML, H * 0.40 - 64, 150, 8);
     // huge stacked title
-    ctx.fillStyle = "#e8e6df";
+    ctx.fillStyle = INK;
     ctx.font = "700 252px 'Space Grotesk', sans-serif";
     const words = m.title.split(" ");
     words.forEach((wrd, i) => ctx.fillText(wrd, ML - 10, H * 0.40 + i * 252));
     // coordinates under the title
     ctx.font = "400 52px 'Space Mono', monospace";
-    ctx.fillStyle = "rgba(232,230,223,0.55)";
+    ctx.fillStyle = "rgba(20,24,26,0.6)";
     ctx.fillText(m.sub ?? "", ML, H * 0.40 + words.length * 252 + 88);
-    // footer: date left, ratio right
+    // footer: date left, index right
     ctx.fillText(m.dateLabel, ML, H - 200);
     ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(232,230,223,0.35)";
+    ctx.fillStyle = "rgba(20,24,26,0.4)";
     ctx.fillText(m.id === "ch-maldives" ? "01 — 02" : "02 — 02", W - ML, H - 200);
     ctx.textAlign = "left";
 
@@ -353,7 +369,11 @@ export class Gallery {
     if (m.kind === "chapter") return;
     const top = document.createElement("div");
     top.className = "lbl";
-    top.innerHTML = `<div class="lbl-title">${m.title}</div>`;
+    top.style.setProperty("--acc", m.accent);
+    const idx = this.momentIndex.get(m.id);
+    top.innerHTML = `<div class="lbl-title">${
+      idx ? `<span class="lbl-idx">${idx}</span>` : ""
+    }${m.title}</div>`;
     if (m.kind === "mood") top.classList.add("lbl-mood");
     const bot = document.createElement("div");
     bot.className = "lbl";
@@ -506,6 +526,39 @@ export class Gallery {
     this.pitch += (this.targetPitch - this.pitch) * k;
     this.camera.rotation.set(this.pitch, -this.yaw, 0);
 
+    // velocity-driven dolly breath: the wall eases back while you move it
+    const speed =
+      (Math.abs(this.yaw - this.prevYaw) + Math.abs(this.pitch - this.prevPitch) * 1.5) /
+      Math.max(dt, 0.001);
+    this.prevYaw = this.yaw;
+    this.prevPitch = this.pitch;
+    const fovTarget = this.interactive && !REDUCED
+      ? clamp(1 + speed * 0.16, 1, 1.085)
+      : 1;
+    this.fovScale += (fovTarget - this.fovScale) * (1 - Math.exp(-dt * 4.5));
+    const f = BASE_FOV * this.fovScale;
+    if (Math.abs(f - this.camera.fov) > 0.005) {
+      this.camera.fov = f;
+      this.camera.updateProjectionMatrix();
+    }
+
+    // which chapter faces the camera (drives the chrome readout)
+    if (++this.frame % 12 === 0) {
+      const fwd = new THREE.Vector3();
+      this.camera.getWorldDirection(fwd);
+      let best = -2;
+      let bestCard: Card | null = null;
+      for (const c of this.cards) {
+        if (c.m.kind !== "chapter") continue;
+        const d = c.basePos.clone().normalize().dot(fwd);
+        if (d > best) { best = d; bestCard = c; }
+      }
+      if (bestCard && bestCard.m.id !== this.frontChapter) {
+        this.frontChapter = bestCard.m.id;
+        this.onChapterChange?.(bestCard.m);
+      }
+    }
+
     // hover raycast (desktop, not while dragging)
     if (this.needRaycast && !this.dragging && this.interactive) {
       this.needRaycast = false;
@@ -514,11 +567,14 @@ export class Gallery {
       const card = hits.length ? (hits[0].object.userData.card as Card) : null;
       const target = card && card.m.kind === "moment" && !card.dimmed ? card : null;
       if (target !== this.hovered) {
-        if (this.hovered)
+        if (this.hovered) {
           gsap.to(this.hovered.mesh.scale, { x: 1, y: 1, z: 1, duration: 0.45, ease: "power3.out" });
+          this.hovered.lblTop?.classList.remove("hot");
+        }
         this.hovered = target;
         if (target) {
           gsap.to(target.mesh.scale, { x: 1.05, y: 1.05, z: 1.05, duration: 0.45, ease: "power3.out" });
+          target.lblTop?.classList.add("hot");
           this.canvas.classList.add("over");
         } else {
           this.canvas.classList.remove("over");
@@ -536,7 +592,7 @@ export class Gallery {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const aspect = w / h;
-    this.camera.fov = 50;
+    this.camera.fov = BASE_FOV * this.fovScale;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -607,8 +663,8 @@ export class Gallery {
   }
 
   private coverDistance(card: Card): number {
-    const vFov = (this.camera.fov * DEG) / 1; // fov in deg → rad below
-    const t = Math.tan((this.camera.fov * DEG) / 2);
+    // always computed at the resting FOV — the dolly breath settles to 1 during transitions
+    const t = Math.tan((BASE_FOV * DEG) / 2);
     const dH = card.h / 2 / t;
     const dW = card.w / 2 / (t * this.camera.aspect);
     return Math.min(dH, dW) * 0.985;
@@ -667,6 +723,9 @@ export class Gallery {
     this.labelLayer.classList.add("hidden");
     this.yaw = this.targetYaw = this.yaw + wrapPi(-card.lon - this.yaw);
     this.pitch = this.targetPitch = card.lat;
+    this.fovScale = 1;
+    this.camera.fov = BASE_FOV;
+    this.camera.updateProjectionMatrix();
     this.camera.rotation.set(this.pitch, -this.yaw, 0);
     const dir = card.basePos.clone().normalize();
     card.mesh.position.copy(dir.multiplyScalar(this.coverDistance(card)));
