@@ -8,7 +8,7 @@
 
 export type Block =
   | { type: "text"; text: string }
-  | { type: "full"; img: string; caption?: string }
+  | { type: "full"; img: string; caption?: string; wide?: boolean }
   | { type: "diptych"; imgs: [string, string]; caption?: string }
   | { type: "food"; img: string; caption?: string }
   | { type: "video"; src: string; poster: string; caption?: string };
@@ -51,12 +51,12 @@ export const MOMENTS: Moment[] = [
     id: "first-night-ashore", kind: "moment", title: "First Night Ashore",
     chapter: "maldives", dateLabel: "JUN 01", tags: ["NIGHTS", "CULTURE"],
     cover: "IMG-058", accent: "#1c6fa6", slot: { row: 0, col: 0 },
-    intro: "Off the seaplane, onto sand streets. The island introduces itself after dark — string lights, hand-painted menus, a surf shop glowing like a lantern.",
+    intro: "Bags down, sun already gone. The island introduces itself after dark — string lights, hand-painted menus, a surf shop glowing like a lantern.",
     blocks: [
       { type: "full", img: "IMG-001", caption: "Arrival lane, Phandhi Retreat — the first walk on a road made of sand." },
       { type: "diptych", imgs: ["IMG-057", "IMG-019"], caption: "Randhaa Surf Shop and the island's tiniest café — boba, jugo, and bulbs." },
       { type: "full", img: "IMG-058", caption: "Owneyes Studio — locally made arts & crafts, one painter still at work." },
-      { type: "full", img: "IMG-056", caption: "Then the moon laid a silver road across the sea, and we went to bed." },
+      { type: "full", img: "IMG-056", wide: true, caption: "Then the moon laid a silver road across the sea, and we went to bed." },
     ],
   },
   {
@@ -65,12 +65,10 @@ export const MOMENTS: Moment[] = [
     cover: "IMG-059", accent: "#5fc7cf", slot: { row: 1, col: 1 },
     intro: "Every shade of blue we'd ever seen, then several we hadn't. Two days of reading the water — pale shallows, the reef line, the deep.",
     blocks: [
-      { type: "full", img: "IMG-007", caption: "The view that made us drop our bags mid-step." },
+      { type: "full", img: "IMG-007", wide: true, caption: "The view that made us drop our bags mid-step." },
       { type: "diptych", imgs: ["IMG-039", "IMG-063"], caption: "The lagoon, always framed by something green." },
-      { type: "full", img: "IMG-059", caption: "RAASTHA III at anchor on glass." },
-      { type: "full", img: "IMG-025", caption: "Two-tone sea from the balcony — reef shallows giving way to navy." },
       { type: "full", img: "IMG-021", caption: "The quiet end of the beach, foam writing its line in the sand." },
-      { type: "full", img: "IMG-042", caption: "Weather rolling in — turquoise refusing to dim under a storm sky." },
+      { type: "full", img: "IMG-042", caption: "Weather rolling in — turquoise refusing to dim under a storm sky. The sky, it turned out, was planning something." },
     ],
   },
   {
@@ -79,10 +77,9 @@ export const MOMENTS: Moment[] = [
     cover: "IMG-041", accent: "#d8453f", slot: { row: 1, col: 2 },
     intro: "We swam in sunshine, stayed through a downpour, and were paid for our patience in full — a rainbow dropping straight into the sea.",
     blocks: [
-      { type: "full", img: "IMG-023", caption: "Red against turquoise — the lagoon's favourite colour combination." },
-      { type: "diptych", imgs: ["IMG-061", "IMG-041"], caption: "In we go." },
+      { type: "diptych", imgs: ["IMG-023", "IMG-061"], caption: "In we go." },
       { type: "full", img: "IMG-062", caption: "Then the rain came — and nobody left the water." },
-      { type: "full", img: "IMG-026", caption: "And then, this. Right on cue." },
+      { type: "full", img: "IMG-026", wide: true, caption: "And then, this. Right on cue." },
       { type: "food", img: "IMG-024", caption: "Garlic spaghetti afterwards, sauce squiggle by the chef's own hand." },
     ],
   },
@@ -93,8 +90,8 @@ export const MOMENTS: Moment[] = [
     intro: "The island empties toward the west bank every evening. June 2 put on the full programme: gold, grey, peach, fire.",
     blocks: [
       { type: "full", img: "IMG-008", caption: "Walking the back road toward the show." },
-      { type: "diptych", imgs: ["IMG-040", "IMG-020"], caption: "The calm acts." },
-      { type: "full", img: "IMG-060", caption: "Then the storm cells caught the light and went theatrical." },
+      { type: "full", img: "IMG-040", caption: "The opening act, all gold and good manners." },
+      { type: "full", img: "IMG-060", wide: true, caption: "Then the storm cells caught the light and went theatrical." },
       { type: "full", img: "IMG-009", caption: "The brooding finale, one tiny boat for scale." },
       { type: "food", img: "IMG-022", caption: "Post-sunset noodles, egg on top. Tradition by day two." },
     ],
@@ -106,7 +103,6 @@ export const MOMENTS: Moment[] = [
     intro: "A table for two under a casuarina strung with fairy lights, candles fighting the sea breeze and winning. The kind of evening you plan once and remember always.",
     blocks: [
       { type: "full", img: "IMG-064", caption: "Golden hour on the jetty first — frangipani tucked behind one ear." },
-      { type: "full", img: "IMG-043", caption: "The table, waiting." },
       { type: "diptych", imgs: ["IMG-066", "IMG-067"], caption: "Candlelight, white cloth, sand underfoot." },
       { type: "food", img: "IMG-068", caption: "Frozen strawberry daiquiri, both hands required." },
       { type: "diptych", imgs: ["IMG-069", "IMG-080"], caption: "Him, very pleased with the venue. Her, lit by the table lamp." },
@@ -130,8 +126,8 @@ export const MOMENTS: Moment[] = [
     cover: "IMG-070", accent: "#cfc6b2", slot: { row: 0, col: 3 },
     intro: "Transit day in the capital, spent inside the Malé Friday Mosque — Hukuru Miskiy — where coral stone is carved like lace and the lacquered ceilings have outlasted four centuries.",
     blocks: [
-      { type: "full", img: "IMG-070", caption: "Through the carved arch into the prayer hall." },
-      { type: "diptych", imgs: ["IMG-028", "IMG-044"], caption: "Coral-stone columns, ebony lattice, a corridor of polished time." },
+      { type: "full", img: "IMG-028", caption: "Coral stone carved like lace — the prayer hall columns." },
+      { type: "full", img: "IMG-044", caption: "A corridor of polished time — ebony lattice and lacquered teak." },
       { type: "food", img: "IMG-071", caption: "Then grain bowls and iced coffee before the flight south." },
     ],
   },
@@ -160,7 +156,7 @@ export const MOMENTS: Moment[] = [
       { type: "food", img: "IMG-081", caption: "Birthday-eve pizza, cheese-pull engineered for the camera." },
       { type: "diptych", imgs: ["IMG-034", "IMG-014"], caption: "Dinner in a courtyard lit purple and teal." },
       { type: "full", img: "IMG-082", caption: "Mirror check at the bar, mural approving in the background." },
-      { type: "diptych", imgs: ["IMG-083", "IMG-084"], caption: "The dress did a full tour — mural to sofa, banner overhead." },
+      { type: "full", img: "IMG-083", caption: "The dress, mid-tour, against somebody's painted jungle." },
       { type: "diptych", imgs: ["IMG-036", "IMG-035"], caption: "It ended on the beach, with a cone, as all good birthdays should." },
     ],
   },
@@ -174,7 +170,7 @@ export const MOMENTS: Moment[] = [
       { type: "full", img: "IMG-072", caption: "Watching the surf roll in from under the shells." },
       { type: "full", img: "IMG-012", caption: "Rice & Spoon, Goviyapana — the sign half-hidden in areca palms." },
       { type: "full", img: "IMG-031", caption: "The terrace to ourselves, rope lamps swaying." },
-      { type: "diptych", imgs: ["IMG-003", "IMG-033"], caption: "Balcony portraits between courses." },
+      { type: "full", img: "IMG-033", caption: "Balcony portrait between courses — his best smile of the trip." },
       { type: "food", img: "IMG-074", caption: "Rice & curry on terracotta — dhal, sambol, papadum on top. The trip's best plate." },
     ],
   },
@@ -198,7 +194,7 @@ export const MOMENTS: Moment[] = [
     blocks: [
       { type: "full", img: "IMG-052", caption: "The ride there, documented via wing mirror." },
       { type: "full", img: "IMG-006", caption: "Galle's most photogenic resident, parked under the ramparts." },
-      { type: "diptych", imgs: ["IMG-053", "IMG-054"], caption: "The whole town turns west at six. We joined." },
+      { type: "full", img: "IMG-054", wide: true, caption: "The whole town turns west at six. We joined." },
       { type: "food", img: "IMG-055", caption: "Ravioli, presented with appropriate ceremony." },
       { type: "full", img: "IMG-018", caption: "One last lane of warm bulbs before the trip let us go." },
     ],
@@ -214,6 +210,7 @@ export const MOMENTS: Moment[] = [
       { type: "full", img: "IMG-077", caption: "Cheek to cheek on the villa deck." },
       { type: "full", img: "IMG-080", caption: "Candlelight suits everyone." },
       { type: "full", img: "IMG-018", caption: "Last night, lit by festoon bulbs." },
+      { type: "text", text: "Two islands, seven days, and a few hundred photographs we'll be retelling for years. — June 2026" },
     ],
   },
 

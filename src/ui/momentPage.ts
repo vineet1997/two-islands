@@ -34,7 +34,7 @@ function blockHtml(b: Block): string {
     case "text":
       return `<div class="blk-text rv">${b.text}</div>`;
     case "full":
-      return `<figure class="blk-full rv">${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+      return `<figure class="blk-full${b.wide ? " wide" : ""} rv">${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "diptych":
       return `<figure class="blk-diptych rv">${ph(b.imgs[0])}${ph(b.imgs[1])}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "food":
@@ -52,9 +52,13 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
   el.className = "page";
   el.style.setProperty("--pm-accent", m.accent);
 
+  // the hero honours the photo's focal point so wide-screen crops keep faces
+  const heroFocal = PHOTOS[m.cover]
+    ? `object-position:${PHOTOS[m.cover].focal[0] * 100}% ${PHOTOS[m.cover].focal[1] * 100}%`
+    : "";
   const heroMedia = m.liveVideo
     ? `<video autoplay muted loop playsinline poster="/video/${m.cover}-poster.jpg" src="/video/${m.cover}-page.mp4"></video>`
-    : `<img src="${img(m.cover, "hero")}" alt="${PHOTOS[m.cover]?.alt ?? ""}" />`;
+    : `<img src="${img(m.cover, "hero")}" alt="${PHOTOS[m.cover]?.alt ?? ""}" style="${heroFocal}" />`;
 
   el.innerHTML = `
     <div class="page-inner">
