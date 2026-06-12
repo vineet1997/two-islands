@@ -19,10 +19,47 @@ const ROWS = [
   { lat: -23 * DEG, count: 7, offset: 0.5 },
 ];
 const PITCH_LIMIT = 25 * DEG;
-/** uniform card height — consistent rhythm is most of what reads as "polish";
- *  sized so cards + labels clear the grid cell boundaries at ±11.5° */
-const CARD_H = 3.0;
+/** Cards are curved patches of the sphere with a fixed ANGULAR height, so they
+ *  sit inside the grid cells exactly — at every screen position and viewport.
+ *  (Flat planes spill across the curved grid lines near the screen edges.) */
+const D_LAT = 17 * DEG;
 const BASE_FOV = 50;
+
+const sphPoint = (r: number, lat: number, lon: number) =>
+  new THREE.Vector3(
+    r * Math.cos(lat) * Math.sin(lon),
+    r * Math.sin(lat),
+    -r * Math.cos(lat) * Math.cos(lon)
+  );
+
+/** spherical patch centered on (latC, lonC); vertices local to the center */
+function patchGeometry(latC: number, lonC: number, dLat: number, dLon: number) {
+  const SEG = 12;
+  const center = sphPoint(RADIUS, latC, lonC);
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  for (let iy = 0; iy <= SEG; iy++) {
+    const lat = latC + dLat / 2 - (iy / SEG) * dLat;
+    for (let ix = 0; ix <= SEG; ix++) {
+      const lon = lonC - dLon / 2 + (ix / SEG) * dLon;
+      const p = sphPoint(RADIUS, lat, lon).sub(center);
+      positions.push(p.x, p.y, p.z);
+      uvs.push(ix / SEG, 1 - iy / SEG);
+    }
+  }
+  for (let iy = 0; iy < SEG; iy++)
+    for (let ix = 0; ix < SEG; ix++) {
+      const a = iy * (SEG + 1) + ix;
+      const b = a + SEG + 1;
+      indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  return { geo, center };
+}
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -64,12 +101,14 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
 interface Card {
   m: Moment;
-  mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+  mesh: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   basePos: THREE.Vector3;
   lon: number;
   lat: number;
-  w: number;
+  w: number; // arc width/height — used for corner radius + cover math
   h: number;
+  cornerTL: THREE.Vector3; // local-space corners for label projection
+  cornerBL: THREE.Vector3;
   lblTop?: HTMLElement;
   lblBot?: HTMLElement;
   dimmed: boolean;
@@ -167,20 +206,18 @@ export class Gallery {
       const lat = row.lat;
       const photo = m.cover ? PHOTOS[m.cover] : null;
       const ratio = m.kind === "chapter" ? 0.75 : photo ? photo.ratio : 0.75;
-      const h = CARD_H;
-      const w = h * ratio;
+      // angular box sized to keep the photo's aspect in arc length
+      const dLat = D_LAT;
+      const dLon = (ratio * dLat) / Math.cos(lat);
+      const h = RADIUS * dLat;
+      const w = RADIUS * dLon * Math.cos(lat);
 
-      const pos = new THREE.Vector3(
-        RADIUS * Math.cos(lat) * Math.sin(lon),
-        RADIUS * Math.sin(lat),
-        -RADIUS * Math.cos(lat) * Math.cos(lon)
-      );
-
-      const geo = new THREE.PlaneGeometry(w, h);
+      const { geo, center } = patchGeometry(lat, lon, dLat, dLon);
       const mat = new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
         transparent: true,
+        side: THREE.DoubleSide,
         uniforms: {
           map: { value: this.placeholderTexture() },
           uOpacity: { value: 0 },
@@ -190,12 +227,15 @@ export class Gallery {
         },
       });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.copy(pos);
-      mesh.lookAt(0, 0, 0);
+      mesh.position.copy(center);
       mesh.scale.setScalar(0.92);
       this.scene.add(mesh);
 
-      const card: Card = { m, mesh, basePos: pos.clone(), lon, lat, w, h, dimmed: false };
+      const card: Card = {
+        m, mesh, basePos: center.clone(), lon, lat, w, h, dimmed: false,
+        cornerTL: sphPoint(RADIUS, lat + dLat / 2, lon - dLon / 2).sub(center),
+        cornerBL: sphPoint(RADIUS, lat - dLat / 2, lon - dLon / 2).sub(center),
+      };
       mesh.userData.card = card;
       this.cards.push(card);
       if (!this.byId.has(m.id)) this.byId.set(m.id, []);
@@ -407,11 +447,11 @@ export class Gallery {
       }
       const s = card.mesh.scale.x;
       // top-left corner, above card
-      v.set((-card.w / 2) * s, (card.h / 2) * s, 0).applyMatrix4(card.mesh.matrixWorld).project(this.camera);
+      v.copy(card.cornerTL).multiplyScalar(s).add(card.mesh.position).project(this.camera);
       const tx = ((v.x + 1) / 2) * W;
       const ty = ((1 - v.y) / 2) * H;
       // bottom-left corner
-      v.set((-card.w / 2) * s, (-card.h / 2) * s, 0).applyMatrix4(card.mesh.matrixWorld).project(this.camera);
+      v.copy(card.cornerBL).multiplyScalar(s).add(card.mesh.position).project(this.camera);
       const bx = ((v.x + 1) / 2) * W;
       const by = ((1 - v.y) / 2) * H;
       card.lblTop.style.opacity = o.toFixed(2);
@@ -667,7 +707,8 @@ export class Gallery {
     const t = Math.tan((BASE_FOV * DEG) / 2);
     const dH = card.h / 2 / t;
     const dW = card.w / 2 / (t * this.camera.aspect);
-    return Math.min(dH, dW) * 0.985;
+    // tighter margin: curved patches bow away from the camera at their edges
+    return Math.min(dH, dW) * 0.94;
   }
 
   /** center the card, upgrade its texture, fly it into the camera. */

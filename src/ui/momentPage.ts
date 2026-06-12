@@ -97,7 +97,10 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
   pageEl = el;
   openId = m.id;
 
-  if (!opts.seamless) {
+  if (opts.seamless) {
+    // fast fade masks the micro-reframe between the curved card and the flat hero
+    gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "power1.out" });
+  } else {
     gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
   }
 
