@@ -74,7 +74,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "rain-then-a-rainbow", kind: "moment", title: "Rain, Then a Rainbow",
     chapter: "maldives", dateLabel: "JUN 03", tags: ["OCEAN", "PEOPLE"],
-    cover: "IMG-041", accent: "#d8453f", slot: { row: 1, col: 2 },
+    cover: "IMG-041", accent: "#d8453f", slot: { row: 2, col: 1 },
     intro: "We swam in sunshine, stayed through a downpour, and were paid for our patience in full — a rainbow dropping straight into the sea.",
     blocks: [
       { type: "diptych", imgs: ["IMG-023", "IMG-061"], caption: "In we go." },
@@ -86,7 +86,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "maldivian-gold", kind: "moment", title: "Maldivian Gold",
     chapter: "maldives", dateLabel: "JUN 02", tags: ["SUNSETS"],
-    cover: "IMG-020", accent: "#e8c98a", slot: { row: 0, col: 1 },
+    cover: "IMG-020", accent: "#e8c98a", slot: { row: 0, col: 2 },
     intro: "The island empties toward the west bank every evening. June 2 put on the full programme: gold, grey, peach, fire.",
     blocks: [
       { type: "full", img: "IMG-008", caption: "Walking the back road toward the show." },
@@ -99,7 +99,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "dinner-on-the-sand", kind: "moment", title: "Dinner on the Sand",
     chapter: "maldives", dateLabel: "JUN 03", tags: ["NIGHTS", "PEOPLE", "FOOD"],
-    cover: "IMG-043", accent: "#e8b860", slot: { row: 1, col: 3 },
+    cover: "IMG-043", accent: "#e8b860", slot: { row: 2, col: 2 },
     intro: "A table for two under a casuarina strung with fairy lights, candles fighting the sea breeze and winning. The kind of evening you plan once and remember always.",
     blocks: [
       { type: "full", img: "IMG-064", caption: "Golden hour on the jetty first — frangipani tucked behind one ear." },
@@ -113,7 +113,7 @@ export const MOMENTS: Moment[] = [
     id: "night-visitor", kind: "moment", title: "Night Visitor",
     chapter: "maldives", dateLabel: "JUN 03", tags: ["WILDLIFE", "NIGHTS"],
     cover: "IMG-010", liveVideo: "/video/IMG-010-loop.mp4",
-    accent: "#6fa8a0", slot: { row: 0, col: 2 },
+    accent: "#6fa8a0", slot: { row: 0, col: 3 },
     intro: "Walking the jetty after dinner, a shape detached itself from the dark — a reef shark patrolling the lit shallows, slow and unbothered.",
     blocks: [
       { type: "video", src: "/video/IMG-010-page.mp4", poster: "/video/IMG-010-poster.jpg", caption: "Sixteen seconds of the Maldives we didn't plan for." },
@@ -123,7 +123,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "old-male", kind: "moment", title: "Old Malé",
     chapter: "maldives", dateLabel: "JUN 04", tags: ["CULTURE", "FOOD"],
-    cover: "IMG-070", accent: "#cfc6b2", slot: { row: 0, col: 3 },
+    cover: "IMG-070", accent: "#cfc6b2", slot: { row: 1, col: 3 },
     intro: "Transit day in the capital, spent inside the Malé Friday Mosque — Hukuru Miskiy — where coral stone is carved like lace and the lacquered ceilings have outlasted four centuries.",
     blocks: [
       { type: "full", img: "IMG-028", caption: "Coral stone carved like lace — the prayer hall columns." },
@@ -149,7 +149,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "the-birthday", kind: "moment", title: "The Birthday",
     chapter: "srilanka", dateLabel: "JUN 04–05", tags: ["NIGHTS", "PEOPLE", "FOOD"],
-    cover: "IMG-084", accent: "#d4a84a", slot: { row: 1, col: 6 },
+    cover: "IMG-084", accent: "#d4a84a", slot: { row: 2, col: 5 },
     intro: "Vineet's birthday, celebrated across two nights — a banner smuggled into the villa, midnight pizza on arrival, and a proper night out ending in ice cream on a boardwalk.",
     blocks: [
       { type: "full", img: "IMG-045", caption: "The banner went up before the bags were even open." },
@@ -177,7 +177,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "brunch-at-the-kip", kind: "moment", title: "Brunch at the kip",
     chapter: "srilanka", dateLabel: "JUN 06", tags: ["FOOD", "PEOPLE"],
-    cover: "IMG-050", accent: "#7fae3a", slot: { row: 0, col: 5 },
+    cover: "IMG-050", accent: "#7fae3a", slot: { row: 0, col: 6 },
     intro: "All-day brunch in a garden full of bamboo and birdsong. We ordered with a pencil and a clipboard and treated it like an exam we intended to ace.",
     blocks: [
       { type: "full", img: "IMG-037", caption: "Heading out — black embroidery, rope bag, high hopes." },
@@ -202,7 +202,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "us", kind: "moment", title: "Us",
     chapter: "both", dateLabel: "JUN 01–07", tags: ["PEOPLE"],
-    cover: "IMG-052", accent: "#e4ddc8", slot: { row: 0, col: 6 },
+    cover: "IMG-052", accent: "#e4ddc8", slot: { row: 2, col: 7 },
     intro: "Two islands, one scooter, eighty-odd photographs of each other. The trip in faces.",
     blocks: [
       { type: "diptych", imgs: ["IMG-064", "IMG-069"], caption: "Maldives, June 3 — dressed for the beach dinner." },
@@ -223,12 +223,12 @@ export const MOMENTS: Moment[] = [
   {
     id: "mood-pavilion", kind: "mood", title: "Moonlit Pavilion", chapter: "maldives",
     dateLabel: "JUN 02", tags: ["NIGHTS"], cover: "IMG-079", accent: "#14283a",
-    slot: { row: 2, col: 1 },
+    slot: { row: 1, col: 2 },
   },
   {
     id: "mood-sunbreak", kind: "mood", title: "Sun Break", chapter: "maldives",
     dateLabel: "JUN 02", tags: ["SUNSETS"], cover: "IMG-078", accent: "#e59a4e",
-    slot: { row: 2, col: 2 },
+    slot: { row: 0, col: 1 },
   },
   {
     id: "mood-glow-tree", kind: "mood", title: "Under the Casuarina", chapter: "maldives",
@@ -238,17 +238,17 @@ export const MOMENTS: Moment[] = [
   {
     id: "mood-garden-bowl", kind: "mood", title: "Garden Detail", chapter: "srilanka",
     dateLabel: "JUN 05", tags: ["STAY"], cover: "IMG-029", accent: "#2f9fd0",
-    slot: { row: 2, col: 4 },
+    slot: { row: 1, col: 6 },
   },
   {
     id: "mood-thatch-profile", kind: "mood", title: "Thatch & Ixora", chapter: "srilanka",
     dateLabel: "JUN 05", tags: [], cover: "IMG-032", accent: "#bda06a",
-    slot: { row: 2, col: 5 },
+    slot: { row: 0, col: 5 },
   },
   {
     id: "mood-courtyard", kind: "mood", title: "Courtyard, Seated", chapter: "srilanka",
     dateLabel: "JUN 05", tags: ["NIGHTS"], cover: "IMG-013", accent: "#8a7766",
-    slot: { row: 2, col: 6 },
+    slot: { row: 2, col: 4 },
   },
 ];
 

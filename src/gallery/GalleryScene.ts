@@ -30,6 +30,9 @@ const RING_OUTER = ROW_PITCH * 1.5; // 7.05 — outer boundary of the top/bottom
 const Y_LIMIT = ROW_PITCH + 0.3;
 const ROW_SNAP = [0, ROW_PITCH, -ROW_PITCH];
 const BASE_FOV = 50;
+/** grab-to-overview: the camera widens (recedes) while you hold/scroll, so you
+ *  navigate from a pulled-back vantage, then eases back in on release */
+const GRAB_FOV = 57;
 /** the photo sits zoomed inside its frame; the visible window pans as the wall
  *  turns — the card becomes a window into the scene rather than a sticker */
 const BASE_ZOOM = 1.12;
@@ -175,8 +178,7 @@ export class Gallery {
   private pointerNdc = new THREE.Vector2(2, 2);
   private needRaycast = false;
   private fovScale = 1;
-  private prevYaw = 0;
-  private prevY = 0;
+  private lastWheelAt = 0;
   private frontChapter = "";
   private frame = 0;
   private momentIndex = new Map<string, string>();
@@ -588,7 +590,7 @@ export class Gallery {
       e.preventDefault();
       this.targetY = clamp(this.targetY + e.deltaY * 0.004, -Y_LIMIT, Y_LIMIT);
       this.targetYaw += e.deltaX * 0.0004;
-      this.lastInteract = performance.now();
+      this.lastWheelAt = this.lastInteract = performance.now();
     }, { passive: false });
   }
 
@@ -636,18 +638,15 @@ export class Gallery {
     this.camera.rotation.set(0, -this.yaw, 0);
     this.camera.position.set(0, this.yPan, 0);
 
-    // velocity-driven dolly breath: the wall eases back while you move it
-    const speed =
-      (Math.abs(this.yaw - this.prevYaw) + Math.abs(this.yPan - this.prevY) * 0.22) /
-      Math.max(dt, 0.001);
-    this.prevYaw = this.yaw;
-    this.prevY = this.yPan;
-    const fovTarget = this.interactive && !REDUCED
-      ? clamp(1 + speed * 0.16, 1, 1.085)
-      : 1;
-    this.fovScale += (fovTarget - this.fovScale) * (1 - Math.exp(-dt * 4.5));
+    // grab-to-overview: the wall recedes while you hold or scroll, then eases
+    // back in on release — you navigate from a pulled-back vantage
+    const grabActive = this.interactive && !REDUCED &&
+      (this.dragging || performance.now() - this.lastWheelAt < 200);
+    const fovTarget = grabActive ? GRAB_FOV / BASE_FOV : 1;
+    const rate = fovTarget > this.fovScale ? 8 : 4; // pull back fast, settle gentle
+    this.fovScale += (fovTarget - this.fovScale) * (1 - Math.exp(-dt * rate));
     const f = BASE_FOV * this.fovScale;
-    if (Math.abs(f - this.camera.fov) > 0.005) {
+    if (Math.abs(f - this.camera.fov) > 0.004) {
       this.camera.fov = f;
       this.camera.updateProjectionMatrix();
     }
