@@ -94,7 +94,9 @@ body {
 .lbl.hot .lbl-title { color: var(--acc, var(--amber)); }
 .lbl.hot .lbl-idx { color: #f2f1ec; }
 .lbl-mood .lbl-title { color: #7e817b; font-weight: 400; }
-.lbl-meta { display: flex; gap: 5px; align-items: center; }
+/* bottom bar spans the cell — chips hug the left rule, date the right */
+.lbl-meta { display: flex; justify-content: space-between; align-items: flex-end; width: 100%; }
+.lbl-chips { display: flex; gap: 5px; }
 .lbl-meta .chip {
   font-size: 8px; letter-spacing: 0.12em; padding: 2px 6px 1px;
   border: 1px solid rgba(232, 230, 223, 0.16); border-radius: 999px;
