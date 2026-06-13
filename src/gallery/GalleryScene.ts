@@ -13,7 +13,12 @@ import { img } from "../data/photos";
 import { PHOTOS } from "../data/photos";
 
 const DEG = Math.PI / 180;
-const RADIUS = 10;
+/** Phones get a tighter, more curved, pulled-back wall: a smaller radius makes
+ *  the cards fill more of their angular cell (less surrounding void) and bows
+ *  the lattice more; a wider FOV pulls the vantage back so more of the wall is
+ *  on screen at once; a shorter row pitch squeezes out the vertical gaps. */
+const MOBILE = typeof matchMedia !== "undefined" && matchMedia("(max-width: 820px)").matches;
+const RADIUS = MOBILE ? 8 : 10;
 /** the 22-card set wraps twice around the cylinder for phantom-style density */
 const INSTANCES = 2;
 /** strict aligned columns (no brick stagger) — 8 per hemisphere; rows with
@@ -22,17 +27,17 @@ const COLS = 8;
 /** row pitch tuned so the cell margin matches horizontally and vertically:
  *  cards are CARD_H tall, cells are ROW_PITCH tall, ~0.8 world-unit margin
  *  all four sides. Rings sit at the cell boundaries (midway between rows). */
-const ROW_PITCH = 4.7;
+const ROW_PITCH = MOBILE ? 3.9 : 4.7;
 const ROWS_Y = [ROW_PITCH, 0, -ROW_PITCH]; // slot.row 0/1/2 → top/mid/bottom
 const CARD_H = 3.1;
-const RING_INNER = ROW_PITCH / 2; // 2.35 — boundary between adjacent rows
-const RING_OUTER = ROW_PITCH * 1.5; // 7.05 — outer boundary of the top/bottom row
+const RING_INNER = ROW_PITCH / 2; // boundary between adjacent rows
+const RING_OUTER = ROW_PITCH * 1.5; // outer boundary of the top/bottom row
 const Y_LIMIT = ROW_PITCH + 0.3;
 const ROW_SNAP = [0, ROW_PITCH, -ROW_PITCH];
-const BASE_FOV = 50;
+const BASE_FOV = MOBILE ? 64 : 50;
 /** grab-to-overview: the camera widens (recedes) while you hold/scroll, so you
  *  navigate from a pulled-back vantage, then eases back in on release */
-const GRAB_FOV = 57;
+const GRAB_FOV = MOBILE ? 71 : 57;
 /** the photo sits zoomed inside its frame; the visible window pans as the wall
  *  turns — the card becomes a window into the scene rather than a sticker */
 const BASE_ZOOM = 1.12;
@@ -584,11 +589,13 @@ export class Gallery {
       this.dragging = false;
       el.classList.remove("dragging");
     });
-    // phantom-style: the wheel pans the wall vertically, shift/trackpad-x rotates
+    // phantom-style: the wheel pans the wall vertically, shift/trackpad-x rotates.
+    // page-scroll convention — scroll down descends the wall (camera pans down),
+    // revealing lower rows, like scrolling down a page reveals content below.
     el.addEventListener("wheel", (e) => {
       if (!this.interactive) return;
       e.preventDefault();
-      this.targetY = clamp(this.targetY + e.deltaY * 0.004, -Y_LIMIT, Y_LIMIT);
+      this.targetY = clamp(this.targetY - e.deltaY * 0.004, -Y_LIMIT, Y_LIMIT);
       this.targetYaw += e.deltaX * 0.0004;
       this.lastWheelAt = this.lastInteract = performance.now();
     }, { passive: false });

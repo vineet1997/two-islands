@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1200px; height: 630px; overflow: hidden; }
+      .card {
+        position: relative; width: 1200px; height: 630px;
+        background:
+          radial-gradient(120% 140% at 78% 18%, #0e1a1c 0%, #080c0c 55%, #060909 100%);
+        font-family: "Space Grotesk", sans-serif; color: #e8e6df;
+        overflow: hidden;
+      }
+      /* curved lattice motif — echoes the gallery cylinder */
+      .lattice { position: absolute; inset: 0; opacity: 0.10; }
+      .grain {
+        position: absolute; inset: 0;
+        background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+        background-size: 4px 4px; mix-blend-mode: overlay; opacity: 0.5;
+      }
+      .frame {
+        position: absolute; inset: 28px; border: 1px solid rgba(232,230,223,0.14);
+      }
+      .corner {
+        position: absolute; font-family: "Space Mono", monospace;
+        font-size: 15px; letter-spacing: 0.22em; color: rgba(232,230,223,0.5);
+        text-transform: uppercase;
+      }
+      .tl { top: 52px; left: 60px; }
+      .tr { top: 52px; right: 60px; text-align: right; line-height: 1.9; }
+      .tr .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 9px; vertical-align: middle; }
+      .content { position: absolute; left: 64px; bottom: 92px; right: 64px; }
+      .kicker {
+        font-family: "Space Mono", monospace; font-size: 17px; letter-spacing: 0.28em;
+        color: rgba(232,230,223,0.62); text-transform: uppercase; margin-bottom: 26px;
+      }
+      .accent-rule { display: inline-block; width: 64px; height: 4px; background: #5fc7cf; margin-bottom: 30px; }
+      h1 {
+        font-weight: 700; font-size: 154px; line-height: 0.9; letter-spacing: -0.02em;
+      }
+      h1 .two { color: #e8e6df; }
+      .reg { font-size: 40px; vertical-align: super; color: rgba(232,230,223,0.4); font-weight: 400; }
+      .baseline {
+        position: absolute; left: 64px; bottom: 52px; right: 64px;
+        display: flex; justify-content: space-between; align-items: center;
+        font-family: "Space Mono", monospace; font-size: 16px; letter-spacing: 0.16em;
+        color: rgba(232,230,223,0.55); text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg class="lattice" viewBox="0 0 1200 630" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- vertical rules -->
+        <g stroke="#e8e6df" stroke-width="1" fill="none">
+          <line x1="150" y1="0" x2="150" y2="630"/>
+          <line x1="375" y1="0" x2="375" y2="630"/>
+          <line x1="600" y1="0" x2="600" y2="630"/>
+          <line x1="825" y1="0" x2="825" y2="630"/>
+          <line x1="1050" y1="0" x2="1050" y2="630"/>
+          <!-- gently curving horizontal rings -->
+          <path d="M0 150 Q600 110 1200 150"/>
+          <path d="M0 315 Q600 270 1200 315"/>
+          <path d="M0 480 Q600 435 1200 480"/>
+        </g>
+      </svg>
+      <div class="frame"></div>
+      <div class="corner tl">N 4.17° · E 73.51°</div>
+      <div class="corner tr">
+        <div><span class="dot" style="background:#5fc7cf"></span>MALÉ, MV</div>
+        <div><span class="dot" style="background:#e8b860"></span>GALLE, LK</div>
+      </div>
+      <div class="content">
+        <div class="kicker">A Travelogue</div>
+        <span class="accent-rule"></span>
+        <h1><span class="two">TWO</span><br/>ISLANDS<span class="reg">®</span></h1>
+      </div>
+      <div class="baseline">
+        <span>Salt, Spice &amp; Monsoon Light</span>
+        <span>Maldives × Sri Lanka — June 2026</span>
+      </div>
+    </div>
+  </body>
+</html>
