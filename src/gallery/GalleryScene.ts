@@ -43,6 +43,15 @@ const GRAB_FOV = MOBILE ? 71 : 57;
 const BASE_ZOOM = 1.12;
 const MAX_PARALLAX = 0.04; // kept within the zoom's UV slack
 const V_RANGE = ROW_PITCH * 1.25; // vertical reach that maps to full parallax
+/** scroll/drag inertia — wheel and drag both feed a shared velocity that keeps
+ *  gliding after the gesture and eases to rest, the way phantom.land throws its
+ *  canvas. FRICTION is per 60fps-frame; the integration is frame-rate
+ *  normalised so the glide travels the same distance on any display. */
+const FRICTION = 0.92;
+const WHEEL_PAN = 0.00028; // wheel deltaY → vertical pan velocity (world units)
+const WHEEL_YAW = 0.00003; // wheel deltaX → rotation velocity (radians)
+const VEL_PAN_MAX = 0.22; // clamps so a hard flick can't bolt across the wall
+const VEL_YAW_MAX = 0.05;
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -562,7 +571,9 @@ export class Gallery {
       this.moved += Math.abs(dx) + Math.abs(dy);
       const kx = 1.7 / el.clientWidth;
       const ky = 9.5 / el.clientHeight; // world units per full-height drag
-      const dyaw = dx * kx;
+      // grab: the wall follows the cursor — drag right and content goes right,
+      // drag down and content goes down (direct manipulation, like phantom)
+      const dyaw = -dx * kx;
       const dpan = dy * ky;
       this.targetYaw += dyaw;
       this.targetY = clamp(this.targetY + dpan, -Y_LIMIT, Y_LIMIT);
@@ -589,14 +600,15 @@ export class Gallery {
       this.dragging = false;
       el.classList.remove("dragging");
     });
-    // phantom-style: the wheel pans the wall vertically, shift/trackpad-x rotates.
-    // page-scroll convention — scroll down descends the wall (camera pans down),
-    // revealing lower rows, like scrolling down a page reveals content below.
+    // wheel / trackpad feeds the SAME momentum as a drag-throw, in page-scroll
+    // convention on both axes (scroll down → content up, scroll right → content
+    // left). Both deltas push velocity, so trackpad flicks glide and a diagonal
+    // gesture moves diagonally — one unified "throw the wall" feel.
     el.addEventListener("wheel", (e) => {
       if (!this.interactive) return;
       e.preventDefault();
-      this.targetY = clamp(this.targetY - e.deltaY * 0.004, -Y_LIMIT, Y_LIMIT);
-      this.targetYaw += e.deltaX * 0.0004;
+      this.velY -= e.deltaY * WHEEL_PAN;
+      this.velYaw += e.deltaX * WHEEL_YAW;
       this.lastWheelAt = this.lastInteract = performance.now();
     }, { passive: false });
   }
@@ -623,20 +635,29 @@ export class Gallery {
     const dt = Math.min(deltaMS / 1000, 0.05);
 
     if (!this.dragging && this.interactive) {
-      this.targetYaw += this.velYaw;
-      this.targetY = clamp(this.targetY + this.velY, -Y_LIMIT, Y_LIMIT);
-      const decay = Math.pow(0.93, dt * 60);
+      // shared momentum: the wall keeps gliding after a flick (wheel OR drag)
+      // and eases to rest. step normalises the integration to 60fps so the
+      // glide travels the same distance regardless of refresh rate.
+      const step = dt * 60;
+      this.velYaw = clamp(this.velYaw, -VEL_YAW_MAX, VEL_YAW_MAX);
+      this.velY = clamp(this.velY, -VEL_PAN_MAX, VEL_PAN_MAX);
+      this.targetYaw += this.velYaw * step;
+      const ny = this.targetY + this.velY * step;
+      this.targetY = clamp(ny, -Y_LIMIT, Y_LIMIT);
+      if (this.targetY !== ny) this.velY = 0; // shed velocity at the top/bottom
+      const decay = Math.pow(FRICTION, step);
       this.velYaw *= decay;
       this.velY *= decay;
-      // row snap: once the vertical axis settles, ease to the nearest row so
-      // the lattice always comes to rest composed
-      if (Math.abs(this.velY) < 0.0016 && performance.now() - this.lastInteract > 280) {
+      // gentle row compose — only once the glide has all but died, so the
+      // lattice settles square without ever yanking back mid-scroll
+      const stilling = Math.abs(this.velY) < 0.0008 && Math.abs(this.velYaw) < 0.0008;
+      if (stilling && performance.now() - this.lastInteract > 450) {
         const nearest = clamp(Math.round(this.targetY / ROW_PITCH) * ROW_PITCH, -ROW_PITCH, ROW_PITCH);
-        this.targetY += (nearest - this.targetY) * (1 - Math.exp(-dt * 3.6));
+        this.targetY += (nearest - this.targetY) * (1 - Math.exp(-dt * 2.2));
       }
       // idle drift
-      if (!REDUCED && performance.now() - this.lastInteract > 3500)
-        this.targetYaw += 0.024 * dt;
+      if (!REDUCED && performance.now() - this.lastInteract > 4500)
+        this.targetYaw += 0.02 * dt;
     }
 
     const k = 1 - Math.exp(-dt * 5.2);
@@ -647,8 +668,9 @@ export class Gallery {
 
     // grab-to-overview: the wall recedes while you hold or scroll, then eases
     // back in on release — you navigate from a pulled-back vantage
+    const gliding = Math.abs(this.velYaw) > 0.0015 || Math.abs(this.velY) > 0.003;
     const grabActive = this.interactive && !REDUCED &&
-      (this.dragging || performance.now() - this.lastWheelAt < 200);
+      (this.dragging || performance.now() - this.lastWheelAt < 200 || gliding);
     const fovTarget = grabActive ? GRAB_FOV / BASE_FOV : 1;
     const rate = fovTarget > this.fovScale ? 8 : 4; // pull back fast, settle gentle
     this.fovScale += (fovTarget - this.fovScale) * (1 - Math.exp(-dt * rate));
