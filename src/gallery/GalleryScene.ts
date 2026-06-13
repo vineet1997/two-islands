@@ -794,10 +794,27 @@ export class Gallery {
     );
   }
 
+  /** snap any previously-flown card back to its slot before flying a new one.
+   *  Without this, a card stranded at cover position — e.g. after page→page
+   *  "next moment" navigation, which swaps the DOM page but never flies the
+   *  old card home — reappears as a giant patch when the wall fades back in. */
+  private homePreviousFly(except: Card | null) {
+    const c = this.flyCard;
+    if (!c || c === except) return;
+    c.mesh.position.copy(c.basePos);
+    c.mesh.scale.setScalar(1);
+    const u = c.mesh.material.uniforms;
+    u.uZoom.value = c.m.kind === "chapter" ? 1 : BASE_ZOOM;
+    (u.uParallax.value as THREE.Vector2).set(0, 0);
+    u.uExpose.value = 1;
+    u.uEdge.value = 0;
+  }
+
   /** center the card, upgrade its texture, fly it into the camera. */
   flyTo(id: string): Promise<void> {
     const card = this.nearestCard(id);
     if (!card) return Promise.resolve();
+    this.homePreviousFly(card);
     this.flyCard = card;
     this.setInteractive(false);
     this.labelLayer.classList.add("hidden");
@@ -848,6 +865,7 @@ export class Gallery {
   resetFly(id: string) {
     const card = this.nearestCard(id);
     if (!card) return;
+    this.homePreviousFly(card);
     this.flyCard = card;
     this.setInteractive(false);
     this.labelLayer.classList.add("hidden");

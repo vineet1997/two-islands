@@ -21,17 +21,16 @@ const texturesLoaded = new Promise<void>((resolve) => {
 });
 
 const gallery = new Gallery(canvas, labelLayer, manager, MOMENTS);
-const ambient = createAmbient();
+const ambient = createAmbient(true); // on by default
+// autoplay is gated behind a user gesture — start the surf on first interaction
+window.addEventListener("pointerdown", () => ambient.unlock(), { once: true });
+window.addEventListener("keydown", () => ambient.unlock(), { once: true });
 const list = buildListView(listRoot);
 
 let pendingFlyId: string | null = null;
 let routing = false;
 
 const chrome = buildChrome(chromeRoot, {
-  onNav(target) {
-    if (target === "story") location.hash = "#/m/us";
-    else location.hash = "";
-  },
   onView(mode) {
     chrome.setView(mode);
     if (mode === "list") list.show();
@@ -72,7 +71,6 @@ async function route() {
     const m = id ? byId(id) : undefined;
 
     if (m && m.kind === "moment") {
-      chrome.setNav(m.id === "us" ? "story" : "moments");
       if (pageIsOpen()) {
         if (currentPageId() === m.id) return;
         // page → page (next-moment nav): quick swap
@@ -92,7 +90,6 @@ async function route() {
         if (gallery.webglOk) gallery.setPaused(true);
       }
     } else {
-      chrome.setNav("moments");
       if (pageIsOpen()) {
         const closedId = currentPageId()!;
         if (gallery.webglOk) {

@@ -1,8 +1,8 @@
-/** Synthesized ambient surf — brown noise through a slow-breathing lowpass. Off by default. */
-export function createAmbient() {
+/** Synthesized ambient surf — brown noise through a slow-breathing lowpass. On by default. */
+export function createAmbient(startOn = false) {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
-  let on = false;
+  let on = startOn;
 
   const init = () => {
     ctx = new AudioContext();
@@ -40,15 +40,28 @@ export function createAmbient() {
     lfo.start();
   };
 
+  // ramp the master gain to match the current on-state
+  const apply = () => {
+    if (!ctx) init();
+    ctx!.resume();
+    const t = ctx!.currentTime;
+    master!.gain.cancelScheduledValues(t);
+    master!.gain.linearRampToValueAtTime(on ? 0.12 : 0, t + 1.2);
+  };
+
   return {
-    toggle(): boolean {
-      if (!ctx) init();
-      ctx!.resume();
-      on = !on;
-      const t = ctx!.currentTime;
-      master!.gain.cancelScheduledValues(t);
-      master!.gain.linearRampToValueAtTime(on ? 0.12 : 0, t + 1.2);
+    isOn(): boolean {
       return on;
+    },
+    toggle(): boolean {
+      on = !on;
+      apply();
+      return on;
+    },
+    /** browsers block audio until a gesture — call once on first interaction
+     *  to honour the default-on state */
+    unlock(): void {
+      if (on) apply();
     },
   };
 }
