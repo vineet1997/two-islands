@@ -1,5 +1,6 @@
 import "./styles.css";
 import * as THREE from "three";
+import { inject } from "@vercel/analytics";
 import { Gallery } from "./gallery/GalleryScene";
 import { MOMENTS, byId } from "./data/moments";
 import { buildChrome } from "./ui/chrome";
@@ -7,6 +8,9 @@ import { createPreloader } from "./ui/preloader";
 import { createAmbient } from "./ui/audio";
 import { buildListView } from "./ui/listView";
 import { openPage, closePage, pageIsOpen, currentPageId } from "./ui/momentPage";
+
+// Initialize Vercel Web Analytics
+inject();
 
 const canvas = document.getElementById("gl") as HTMLCanvasElement;
 const labelLayer = document.getElementById("labels")!;
