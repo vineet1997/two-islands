@@ -3,7 +3,10 @@ import { gsap } from "gsap";
 import Lenis from "lenis";
 import type { Moment, Block } from "../data/moments";
 import { nextMoment } from "../data/moments";
+import type { Artifact } from "../data/artifacts";
 import { PHOTOS, img } from "../data/photos";
+import { mountArtifacts, artifactSlot } from "./artifacts";
+import { mountPageMotion } from "./pageMotion";
 import lqipRaw from "../data/lqip.json";
 
 const lqip = lqipRaw as Record<string, string>;
@@ -15,6 +18,7 @@ let rafCb: ((t: number) => void) | null = null;
 let io: IntersectionObserver | null = null;
 let openId: string | null = null;
 let escHandler: ((e: KeyboardEvent) => void) | null = null;
+let motionTeardown: (() => void) | null = null;
 
 export const pageIsOpen = () => pageEl !== null;
 export const currentPageId = () => openId;
@@ -29,20 +33,48 @@ function ph(id: string, size: "page" | "hero" = "page"): string {
   </div>`;
 }
 
-function blockHtml(b: Block): string {
+function noteHtml(b: Extract<Block, { type: "note" }>): string {
+  const v = b.variant ?? "aside";
+  const k = b.kicker ? `<span class="note-k">${b.kicker}</span>` : "";
+  if (v === "stat") {
+    const items = (b.stats ?? [])
+      .map((s) => `<div class="stat"><span class="stat-v" data-count>${s.value}</span><span class="stat-l">${s.label}</span></div>`)
+      .join("");
+    return `<div class="blk-note note-stat rv">${k}<div class="stat-row">${items}</div>${b.text ? `<p class="stat-note">${b.text}</p>` : ""}</div>`;
+  }
+  if (v === "quote") {
+    return `<blockquote class="blk-note note-quote rv"><p>${b.text}</p>${b.kicker ? `<cite class="note-k">${b.kicker}</cite>` : ""}</blockquote>`;
+  }
+  return `<aside class="blk-note note-aside rv">${k}<p>${b.text}</p></aside>`;
+}
+
+function blockHtml(b: Block, arts: Artifact[]): string {
   switch (b.type) {
     case "text":
       return `<div class="blk-text rv">${b.text}</div>`;
     case "full":
-      return `<figure class="blk-full${b.wide ? " wide" : ""} rv">${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+      return `<figure class="blk-full${b.wide ? " wide" : ""} rv" data-parallax>${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "diptych":
       return `<figure class="blk-diptych rv">${ph(b.imgs[0])}${ph(b.imgs[1])}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "food":
       return `<figure class="blk-food rv">${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "video":
-      return `<figure class="blk-video rv"><div class="ph">
+      return `<figure class="blk-video${b.wide ? " wide" : ""} rv"><div class="ph">
         <video muted loop playsinline preload="metadata" poster="${b.poster}" src="${b.src}"></video>
       </div>${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+    case "note":
+      return noteHtml(b);
+    case "spread": {
+      const note = `<div class="spread-note"><span class="note-k">${b.kicker}</span><p>${b.text}</p></div>`;
+      if (b.overlay)
+        return `<figure class="blk-spread spread-overlay rv" data-parallax>${ph(b.img)}<figcaption class="spread-note">${`<span class="note-k">${b.kicker}</span><p>${b.text}</p>`}</figcaption></figure>`;
+      return `<div class="blk-spread spread-beside${b.flip ? " flip" : ""} rv">
+        <figure class="spread-ph" data-parallax>${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>
+        ${note}</div>`;
+    }
+    case "artifact":
+      arts.push(b.art);
+      return artifactSlot(arts.length - 1);
   }
 }
 
@@ -59,6 +91,10 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
   const heroMedia = m.liveVideo
     ? `<video autoplay muted loop playsinline poster="/video/${m.cover}-poster.jpg" src="/video/${m.cover}-page.mp4"></video>`
     : `<img src="${img(m.cover, "hero")}" alt="${PHOTOS[m.cover]?.alt ?? ""}" style="${heroFocal}" />`;
+
+  // collect artifact specs as the body is built, then mount them after insert
+  const arts: Artifact[] = [];
+  const bodyHtml = (m.blocks ?? []).map((b) => blockHtml(b, arts)).join("");
 
   el.innerHTML = `
     <div class="page-inner">
@@ -77,7 +113,7 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
       </div>
       <div class="page-body">
         ${m.intro ? `<div class="blk-intro rv">${m.intro}</div>` : ""}
-        ${(m.blocks ?? []).map(blockHtml).join("")}
+        ${bodyHtml}
       </div>
       <footer class="page-next">
         <a href="#/m/${next.id}">
@@ -139,6 +175,12 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
   );
   el.querySelectorAll(".rv").forEach((n) => io!.observe(n));
 
+  // build + lazily animate any artifacts (maps, milestones…) on scroll-in
+  mountArtifacts(el, arts);
+
+  // image parallax + stat count-ups (scroll-linked; cleaned up on close)
+  motionTeardown = mountPageMotion(el, lenis);
+
   // mark eagerly-loaded images
   el.querySelectorAll<HTMLImageElement>("img").forEach((i) => {
     if (i.complete && i.naturalWidth > 0) i.classList.add("ld");
@@ -161,6 +203,8 @@ export async function closePage(opts: { instant: boolean }): Promise<void> {
   if (escHandler) window.removeEventListener("keydown", escHandler);
   io?.disconnect();
   io = null;
+  motionTeardown?.();
+  motionTeardown = null;
   if (rafCb) gsap.ticker.remove(rafCb);
   rafCb = null;
   lenis?.destroy();

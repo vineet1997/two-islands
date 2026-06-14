@@ -102,6 +102,41 @@ export const PHOTOS: Record<string, Photo> = Object.fromEntries(
     P("IMG-083", 0.44, 0.30, "Woman in a brown halter maxi against a pastel tropical mural"),
     P("IMG-084", 0.46, 0.30, "Posing on the villa sofa, a Happy Birthday banner across the window"),
     P("IMG-010", 0.45, 0.42, "A reef shark gliding through dark green shallows below a lit jetty", 0.5625),
+    // ── transit ──
+    P("IMG-085", 0.45, 0.42, "SriLankan Airlines' pink winglet over golden, sunlit cloud at altitude", 3072 / 4080),
+    P("IMG-086", 0.50, 0.45, "Night selfie of the two travellers at Delhi airport, palm and lit storefronts behind", 1280 / 960),
+    P("IMG-087", 0.50, 0.42, "The two travellers waiting in an airport lounge of plush armchairs and brass lamps", 1280 / 960),
+    P("IMG-088", 0.56, 0.40, "Selfie inside the aircraft cabin, her in a yellow jacket by the window", 720 / 1280),
+    // ── golden hour in galle ──
+    P("IMG-091", 0.50, 0.55, "Cocoa-dusted tiramisu in a glass, two spoons descending to share it", 960 / 1280),
+    P("IMG-092", 0.42, 0.42, "Man in green watching a pastel sunset over the sea from the Galle Fort ramparts", 1600 / 1200),
+    // ── rain, then a rainbow ──
+    P("IMG-093", 0.48, 0.40, "Woman in a black bikini standing in clear turquoise shallows, breakwater behind", 960 / 1280),
+    P("IMG-094", 0.48, 0.42, "Woman in a sheer red cover-up smiling in the turquoise lagoon shallows", 960 / 1280),
+    P("IMG-095", 0.46, 0.42, "Woman in a sheer red cover-up, arm outstretched, laughing in the lagoon", 960 / 1280),
+    P("IMG-096", 0.50, 0.45, "A cheek kiss in the villa garden, both in white against the green", 1200 / 1600),
+    // ── the food ──
+    P("IMG-097", 0.50, 0.50, "Two falafel-topped custom grain bowls at Ka Bowl, Malé", 4080 / 3072),
+    P("IMG-098", 0.50, 0.55, "A bowl of aglio e olio at The Nexus Hub, Thulusdhoo"),
+    P("IMG-099", 0.50, 0.52, "A bright green health bowl at Crave, Ahangama"),
+    P("IMG-100", 0.50, 0.55, "Thai green curry with rice at Season Paradise, Thulusdhoo"),
+    P("IMG-101", 0.50, 0.52, "A couscous health bowl at Onda, Thulusdhoo"),
+    P("IMG-102", 0.50, 0.52, "A margherita pizza, takeaway from Donna's, Ahangama"),
+    P("IMG-103", 0.50, 0.55, "A bowl of red curry at The Nexus Hub, Thulusdhoo"),
+    P("IMG-104", 0.50, 0.55, "A Sri Lankan rice-and-curry spread at Rice & Spoon, Ahangama"),
+    P("IMG-105", 0.50, 0.55, "Tofu teriyaki at Season Paradise, Thulusdhoo"),
+    P("IMG-106", 0.50, 0.42, "Soaked and laughing on the beach, the turquoise lagoon behind", 1920 / 2560),
+    // ── dinner on the sand ──
+    P("IMG-107", 0.42, 0.55, "Dressed in cream ruffles with frangipani in her hair, on the jetty at golden hour", 963 / 1280),
+    P("IMG-108", 0.45, 0.50, "Smiling at the candlelit beach table, flowers and a glowing lamp in front", 963 / 1280),
+    P("IMG-109", 0.48, 0.42, "In cream ruffles among woven-rattan wall art and pendant lamps at the restaurant", 963 / 1280),
+    P("IMG-110", 0.50, 0.45, "A carved wooden archway on the beach framing a thatched jetty and the turquoise lagoon", 3072 / 4080),
+    // ── villa in the jungle ──
+    P("IMG-112", 0.50, 0.42, "The two of us in white among the villa's jungle green", 960 / 1280),
+    P("IMG-113", 0.40, 0.40, "A close embrace, eyes shut and smiling, dense jungle behind", 720 / 1280),
+    P("IMG-114", 0.50, 0.45, "A grinning couple selfie, her in red and him in white, the sea in the window behind", 1200 / 1600),
+    P("IMG-115", 0.50, 0.45, "Dusk over the reef and lagoon, seen from the room the first evening", 1280 / 960),
+    P("IMG-116", 0.50, 0.50, "Takeaway cups hand-lettered Vineet and Priya with little hearts, beside a slice of cake", 1600 / 1200),
   ].map((p) => [p.id, p])
 );
 

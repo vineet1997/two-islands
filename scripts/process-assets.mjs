@@ -118,9 +118,10 @@ for (const [id, file] of Object.entries(manifest.videos)) {
     ]);
     console.log(`video page: ${id}`);
   }
-  // poster frame (mid-clip) -> jpg -> webp tile for preloads/fallback
+  // poster frame -> jpg -> webp tile for preloads/fallback. Seek 1s in so it
+  // works for short clips too (an 8s seek yields no frame on a <8s video).
   if (FORCE || !(await exists(posterWebp))) {
-    await exec(ffmpegPath, ["-y", "-ss", "8", "-i", src, "-frames:v", "1", posterJpg]);
+    await exec(ffmpegPath, ["-y", "-ss", "1", "-i", src, "-frames:v", "1", posterJpg]);
     await sharp(posterJpg).resize({ width: 640 }).webp({ quality: 72 }).toFile(posterWebp);
     const buf = await sharp(posterJpg).resize({ width: 24 }).webp({ quality: 20 }).toBuffer();
     lqip[id] = `data:image/webp;base64,${buf.toString("base64")}`;
