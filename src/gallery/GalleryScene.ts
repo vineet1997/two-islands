@@ -11,6 +11,7 @@ import { gsap } from "gsap";
 import type { Moment } from "../data/moments";
 import { img } from "../data/photos";
 import { PHOTOS } from "../data/photos";
+import { SRI_LANKA, MALDIVES_ATOLLS } from "../data/geo";
 
 const DEG = Math.PI / 180;
 /** Phones get a tighter, more curved, pulled-back wall: a smaller radius makes
@@ -270,7 +271,9 @@ export class Gallery {
       const yPos = ROWS_Y[m.slot.row];
       const photo = m.cover ? PHOTOS[m.cover] : null;
       const ratio = m.kind === "chapter" ? 0.75 : photo ? photo.ratio : 0.75;
-      const h = CARD_H;
+      // chapter plates ride larger than the photo tiles — feature dividers, still
+      // within their grid cell so they don't overlap neighbours
+      const h = m.kind === "chapter" ? CARD_H * 1.18 : CARD_H;
       const w = h * ratio;
       const dLon = 2 * Math.asin(w / 2 / RADIUS);
 
@@ -401,44 +404,100 @@ export class Gallery {
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     const ctx = c.getContext("2d")!;
-    // cream plate — the two typographic cards punctuate the photo wall
+    const maldives = m.id === "ch-maldives";
+    const CREAM = "#f2efe6";
+
+    // a deep, saturated field in the chapter's colour — a weighty divider, and
+    // a nautical-chart of the island, echoing the maps elsewhere in the piece
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#ece8dc");
-    g.addColorStop(1, "#ddd7c6");
+    if (maldives) { g.addColorStop(0, "#1a5b60"); g.addColorStop(1, "#0c3034"); }
+    else { g.addColorStop(0, "#7e5c20"); g.addColorStop(1, "#46330f"); }
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = "rgba(20,24,26,0.2)";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(12, 12, W - 24, H - 24);
 
-    const ML = 118; // left margin
+    // faint chart graticule
+    ctx.strokeStyle = "rgba(242,239,230,0.06)";
+    ctx.lineWidth = 2;
+    for (let x = 128; x < W; x += 128) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 128; y < H; y += 128) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    ctx.strokeStyle = "rgba(242,239,230,0.22)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(28, 28, W - 56, H - 56);
+
+    // the island silhouette, fitted into the upper field
+    this.drawIsland(ctx, maldives, 200, 250, W - 400, 960);
+
+    // type
+    const ML = 118;
     ctx.textBaseline = "top";
-    ctx.font = "400 46px 'Space Mono', monospace";
-    ctx.fillStyle = "rgba(20,24,26,0.55)";
-    ctx.fillText(m.id === "ch-maldives" ? "CH. 01" : "CH. 02", ML, 116);
-    ctx.fillStyle = "rgba(20,24,26,0.3)";
-    for (let y = 0; y < 6; y++)
-      for (let x = 0; x < 9; x++)
-        ctx.fillRect(W - 118 - 8 * 42 + x * 42, 116 + y * 42, 6, 6);
-    ctx.fillStyle = m.accent;
-    ctx.fillRect(ML, H * 0.40 - 64, 150, 8);
-    ctx.fillStyle = "#14181a";
-    ctx.font = "700 252px 'Space Grotesk', sans-serif";
-    const words = m.title.split(" ");
-    words.forEach((wrd, i) => ctx.fillText(wrd, ML - 10, H * 0.40 + i * 252));
-    ctx.font = "400 52px 'Space Mono', monospace";
-    ctx.fillStyle = "rgba(20,24,26,0.6)";
-    ctx.fillText(m.sub ?? "", ML, H * 0.40 + words.length * 252 + 88);
-    ctx.fillText(m.dateLabel, ML, H - 200);
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(20,24,26,0.4)";
-    ctx.fillText(m.id === "ch-maldives" ? "01 — 02" : "02 — 02", W - ML, H - 200);
     ctx.textAlign = "left";
+    ctx.font = "400 50px 'Space Mono', monospace";
+    ctx.fillStyle = "rgba(242,239,230,0.6)";
+    ctx.fillText(maldives ? "CH. 01" : "CH. 02", ML, 120);
+    ctx.textAlign = "right";
+    ctx.fillText(maldives ? "01 — 02" : "02 — 02", W - ML, 120);
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = CREAM;
+    ctx.fillRect(ML, 1432, 160, 8);
+
+    ctx.font = "700 236px 'Space Grotesk', sans-serif";
+    const words = m.title.split(" ");
+    words.forEach((wrd, i) => ctx.fillText(wrd, ML - 8, 1474 + i * 222));
+
+    ctx.font = "400 66px 'Space Mono', monospace";
+    ctx.fillStyle = "rgba(242,239,230,0.72)";
+    ctx.fillText(m.dateLabel, ML, 1474 + words.length * 222 + 44);
 
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.NoColorSpace;
     t.anisotropy = 8;
     return t;
+  }
+
+  /** draw the island's real (simplified) shape in glowing cream, fitted to a rect */
+  private drawIsland(
+    ctx: CanvasRenderingContext2D, maldives: boolean,
+    rx: number, ry: number, rw: number, rh: number
+  ) {
+    const pts = maldives ? MALDIVES_ATOLLS : SRI_LANKA;
+    let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
+    for (const [lon, lat] of pts) {
+      minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+      minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    }
+    const k = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+    const gw = (maxLon - minLon) * k || 1, gh = (maxLat - minLat) || 1;
+    const scale = Math.min(rw / gw, rh / gh) * 0.9;
+    const ox = rx + rw / 2, oy = ry + rh / 2;
+    const px = (lon: number) => ox + ((lon - minLon) * k - gw / 2) * scale;
+    const py = (lat: number) => oy + ((maxLat - lat) - gh / 2) * scale;
+
+    ctx.save();
+    ctx.lineJoin = "round";
+    if (maldives) {
+      // the atoll chain — a faint spine joining rings of reef
+      ctx.strokeStyle = "rgba(242,239,230,0.22)"; ctx.lineWidth = 4;
+      ctx.beginPath();
+      pts.forEach((p, i) => { const X = px(p[0]), Y = py(p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.stroke();
+      ctx.shadowColor = "rgba(242,239,230,0.45)"; ctx.shadowBlur = 24;
+      pts.forEach((p, i) => {
+        const X = px(p[0]), Y = py(p[1]), r = 30 + (i % 3) * 18;
+        ctx.beginPath(); ctx.ellipse(X, Y, r * 0.7, r, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(242,239,230,0.10)"; ctx.fill();
+        ctx.strokeStyle = "rgba(242,239,230,0.85)"; ctx.lineWidth = 6; ctx.stroke();
+      });
+    } else {
+      ctx.shadowColor = "rgba(242,239,230,0.5)"; ctx.shadowBlur = 30;
+      ctx.beginPath();
+      pts.forEach((p, i) => { const X = px(p[0]), Y = py(p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.closePath();
+      ctx.fillStyle = "rgba(242,239,230,0.1)"; ctx.fill();
+      ctx.strokeStyle = "rgba(242,239,230,0.9)"; ctx.lineWidth = 7; ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private redrawChapterCards() {
