@@ -18,7 +18,7 @@ const DEG = Math.PI / 180;
  *  the lattice more; a wider FOV pulls the vantage back so more of the wall is
  *  on screen at once; a shorter row pitch squeezes out the vertical gaps. */
 const MOBILE = typeof matchMedia !== "undefined" && matchMedia("(max-width: 820px)").matches;
-const RADIUS = MOBILE ? 8 : 10;
+const RADIUS = MOBILE ? 8.3 : 10;
 /** the 22-card set wraps twice around the cylinder for phantom-style density */
 const INSTANCES = 2;
 /** strict aligned columns (no brick stagger) — 8 per hemisphere; rows with
@@ -27,7 +27,7 @@ const COLS = 8;
 /** row pitch tuned so the cell margin matches horizontally and vertically:
  *  cards are CARD_H tall, cells are ROW_PITCH tall, ~0.8 world-unit margin
  *  all four sides. Rings sit at the cell boundaries (midway between rows). */
-const ROW_PITCH = MOBILE ? 3.9 : 4.7;
+const ROW_PITCH = MOBILE ? 4.2 : 4.7;
 const ROWS_Y = [ROW_PITCH, 0, -ROW_PITCH]; // slot.row 0/1/2 → top/mid/bottom
 const CARD_H = 3.1;
 const RING_INNER = ROW_PITCH / 2; // boundary between adjacent rows
@@ -54,6 +54,11 @@ const VEL_PAN_MAX = 0.22; // clamps so a hard flick can't bolt across the wall
 const VEL_YAW_MAX = 0.05;
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// chapter temperature — the homepage warms from Maldives teal to Sri Lanka gold
+const C_CREAM = new THREE.Color(0xe8e6df);
+const C_MALDIVES = new THREE.Color(0x5fc7cf);
+const C_SRILANKA = new THREE.Color(0xe8b860);
 
 const cylPoint = (lon: number, y: number, r = RADIUS) =>
   new THREE.Vector3(r * Math.sin(lon), y, -r * Math.cos(lon));
@@ -105,7 +110,22 @@ uniform float uRadius;
 uniform vec2 uParallax;  // window pan within the frame
 uniform float uZoom;     // internal zoom (>1 = zoomed in)
 uniform float uExpose;   // hover exposure lift
-uniform float uEdge;     // 0 at screen centre → 1 toward the cylinder's edge
+uniform float uEdge;     // 0 on the focal (centred) card → 1 once turned away
+
+const float TAU = 6.2831853;
+// soft two-ring disk blur whose radius grows as the card turns off focus
+vec3 windowSample(vec2 uv, float rad) {
+  vec3 c = texture2D(map, clamp(uv, 0.0015, 0.9985)).rgb;
+  if (rad < 0.0009) return c;            // the focal card stays perfectly crisp
+  for (int i = 0; i < 6; i++) {
+    float a = TAU * (float(i) / 6.0);
+    vec2 o = vec2(cos(a), sin(a)) * rad;
+    c += texture2D(map, clamp(uv + o, 0.0015, 0.9985)).rgb;
+    c += texture2D(map, clamp(uv + o * 0.5, 0.0015, 0.9985)).rgb;
+  }
+  return c / 13.0;
+}
+
 void main() {
   // rounded-rect mask in card space
   vec2 p = (vUv - 0.5) * uSize;
@@ -115,20 +135,23 @@ void main() {
   float aa = fwidth(dist) * 1.4;
   float alpha = 1.0 - smoothstep(-aa, aa, dist);
 
-  // the window: zoom into the texture, then pan it as the wall turns
+  // the window: zoom into the texture, pan it as the wall turns, and defocus
+  // it as the card leaves the focal column so the centre holds the eye
   vec2 uv = (vUv - 0.5) / uZoom + 0.5 + uParallax;
-  vec4 tex = texture2D(map, clamp(uv, 0.0015, 0.9985));
+  vec3 tex = windowSample(uv, uEdge * 0.012);
 
-  float g = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
-  vec3 col = mix(tex.rgb, vec3(g * 0.55), uDim);
+  float g = dot(tex, vec3(0.299, 0.587, 0.114));
+  vec3 col = mix(tex, vec3(g * 0.55), uDim);
   col *= 1.0 - uDim * 0.45;
+  // off-focus cards fall back: a touch desaturated, so the centre pops
+  col = mix(col, vec3(g), uEdge * 0.22);
 
   // inner edge shade — the photo sits set into the frame with depth
   float inset = -dist; // positive inside the card
   col *= 0.95 + 0.05 * smoothstep(0.015, 0.16, inset);
 
-  // exposure: hover lift, minus a falloff toward the cylinder's edge
-  col *= uExpose * (1.0 - 0.085 * uEdge);
+  // exposure: hover lift, minus a falloff as the card leaves focus
+  col *= uExpose * (1.0 - 0.1 * uEdge);
 
   // hairline frame, phantom-style
   float edge = 1.0 - smoothstep(-aa, aa, dist + 0.028);
@@ -158,6 +181,7 @@ interface Card {
 export class Gallery {
   onCardClick?: (m: Moment) => void;
   onChapterChange?: (m: Moment) => void;
+  onHover?: (m: Moment | null) => void;
 
   private renderer!: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -195,6 +219,9 @@ export class Gallery {
   private lastWheelAt = 0;
   private frontChapter = "";
   private frame = 0;
+  private _accent = new THREE.Color();
+  private _latColor = new THREE.Color();
+  private lastChapterHex = "";
   private momentIndex = new Map<string, string>();
 
   webglOk = true;
@@ -495,8 +522,10 @@ export class Gallery {
 
       // window parallax + edge falloff (frozen during a fly so tweens win)
       if (this.interactive) {
-        const edge = clamp((0.8 - cos) / 0.5, 0, 1);
-        u.uEdge.value = edge;
+        // depth of field: the centred column is the focal plane; cards soften
+        // as soon as they drift off it (smoothstep on how far they've turned)
+        const t = clamp((1 - cos - 0.02) / 0.13, 0, 1);
+        u.uEdge.value = t * t * (3 - 2 * t);
         if (card.m.kind !== "chapter") {
           const angleX = wrapPi(card.lon - this.yaw);
           const px = clamp(angleX / 0.5, -1, 1) * MAX_PARALLAX;
@@ -666,6 +695,19 @@ export class Gallery {
     this.camera.rotation.set(0, -this.yaw, 0);
     this.camera.position.set(0, this.yPan, 0);
 
+    // chapter temperature: the plates sit 90° apart, so sin²(yaw) blends
+    // Maldives teal → Sri Lanka gold continuously as the wall turns
+    const s = Math.sin(this.yaw);
+    this._accent.copy(C_MALDIVES).lerp(C_SRILANKA, s * s);
+    this._latColor.copy(C_CREAM).lerp(this._accent, 0.3);
+    this.gridMat.color.copy(this._latColor);
+    this.gridGlyphMat.color.copy(this._latColor);
+    const hex = "#" + this._accent.getHexString();
+    if (hex !== this.lastChapterHex) {
+      this.lastChapterHex = hex;
+      document.documentElement.style.setProperty("--chapter", hex);
+    }
+
     // grab-to-overview: the wall recedes while you hold or scroll, then eases
     // back in on release — you navigate from a pulled-back vantage
     const gliding = Math.abs(this.velYaw) > 0.0015 || Math.abs(this.velY) > 0.003;
@@ -712,6 +754,7 @@ export class Gallery {
           this.hovered.lblTop?.classList.remove("hot");
         }
         this.hovered = target;
+        this.onHover?.(target ? target.m : null);
         if (target) {
           // the card lifts AND its window opens — two layers of depth
           gsap.to(target.mesh.scale, { x: 1.05, y: 1.05, z: 1.05, duration: 0.45, ease: "power3.out" });

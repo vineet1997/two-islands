@@ -7,6 +7,7 @@ import { buildChrome } from "./ui/chrome";
 import { createPreloader } from "./ui/preloader";
 import { createAmbient } from "./ui/audio";
 import { buildListView } from "./ui/listView";
+import { mountCursor } from "./ui/cursor";
 import { openPage, closePage, pageIsOpen, currentPageId } from "./ui/momentPage";
 
 // Initialize Vercel Web Analytics
@@ -52,6 +53,10 @@ gallery.onCardClick = (m) => {
   pendingFlyId = m.id;
   location.hash = `#/m/${m.id}`;
 };
+
+// custom reticle cursor — reacts to the gallery's hover state (mouse only)
+const cursor = mountCursor(canvas);
+gallery.onHover = (m) => cursor.setHover(m);
 
 const parseHash = (): string | null => {
   const match = location.hash.match(/^#\/m\/([\w-]+)/);
