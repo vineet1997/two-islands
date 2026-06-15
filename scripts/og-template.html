@@ -4,88 +4,114 @@
     <meta charset="UTF-8" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Caveat:wght@600&display=swap" rel="stylesheet" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1200px; height: 630px; overflow: hidden; }
       .card {
-        position: relative; width: 1200px; height: 630px;
+        position: relative; width: 1200px; height: 630px; overflow: hidden;
         background:
-          radial-gradient(120% 140% at 78% 18%, #0e1a1c 0%, #080c0c 55%, #060909 100%);
-        font-family: "Space Grotesk", sans-serif; color: #e8e6df;
-        overflow: hidden;
+          radial-gradient(140% 120% at 80% 10%, #f2ecdd 0%, #e7e0cd 55%, #ded6c0 100%);
+        font-family: "Space Grotesk", sans-serif; color: #16201f;
       }
-      /* curved lattice motif — echoes the gallery cylinder */
-      .lattice { position: absolute; inset: 0; opacity: 0.10; }
-      .grain {
-        position: absolute; inset: 0;
-        background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-        background-size: 4px 4px; mix-blend-mode: overlay; opacity: 0.5;
+      .grain { position: absolute; inset: 0; opacity: 0.5; mix-blend-mode: multiply;
+        background-image: radial-gradient(rgba(120,110,80,0.06) 1px, transparent 1px); background-size: 3px 3px; }
+      .frame { position: absolute; inset: 18px; border: 1px solid rgba(20,24,26,0.18); }
+
+      /* the photo, tucked on like a print */
+      .photo {
+        position: absolute; left: 52px; top: 56px; width: 486px; height: 520px;
+        background: #fbf8f0; padding: 13px 13px 40px; transform: rotate(-1.3deg);
+        box-shadow: 0 14px 30px rgba(20,24,26,0.22), 0 2px 6px rgba(20,24,26,0.16);
       }
-      .frame {
-        position: absolute; inset: 28px; border: 1px solid rgba(232,230,223,0.14);
-      }
-      .corner {
-        position: absolute; font-family: "Space Mono", monospace;
-        font-size: 15px; letter-spacing: 0.22em; color: rgba(232,230,223,0.5);
-        text-transform: uppercase;
-      }
-      .tl { top: 52px; left: 60px; }
-      .tr { top: 52px; right: 60px; text-align: right; line-height: 1.9; }
-      .tr .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 9px; vertical-align: middle; }
-      .content { position: absolute; left: 64px; bottom: 92px; right: 64px; }
-      .kicker {
-        font-family: "Space Mono", monospace; font-size: 17px; letter-spacing: 0.28em;
-        color: rgba(232,230,223,0.62); text-transform: uppercase; margin-bottom: 26px;
-      }
-      .accent-rule { display: inline-block; width: 64px; height: 4px; background: #5fc7cf; margin-bottom: 30px; }
-      h1 {
-        font-weight: 700; font-size: 154px; line-height: 0.9; letter-spacing: -0.02em;
-      }
-      h1 .two { color: #e8e6df; }
-      .reg { font-size: 40px; vertical-align: super; color: rgba(232,230,223,0.4); font-weight: 400; }
-      .baseline {
-        position: absolute; left: 64px; bottom: 52px; right: 64px;
-        display: flex; justify-content: space-between; align-items: center;
-        font-family: "Space Mono", monospace; font-size: 16px; letter-spacing: 0.16em;
-        color: rgba(232,230,223,0.55); text-transform: uppercase;
-      }
+      .photo img { width: 100%; height: 460px; object-fit: cover; object-position: 52% 56%; display: block; }
+      .photo .cap { font-family: "Space Mono", monospace; font-size: 11px; letter-spacing: 0.16em;
+        text-transform: uppercase; color: #6b6452; margin-top: 12px; text-align: center; }
+
+      /* the written side */
+      .head { position: absolute; left: 600px; top: 60px; font-family: "Space Mono", monospace;
+        font-size: 12px; letter-spacing: 0.42em; color: #8a8266; }
+      .rule { position: absolute; left: 600px; top: 88px; width: 470px; height: 1px; background: rgba(20,24,26,0.2); }
+
+      .eyebrow { position: absolute; left: 600px; top: 226px; font-family: "Space Mono", monospace;
+        font-size: 13px; letter-spacing: 0.26em; color: #2f8f93; }
+      .accent-rule { position: absolute; left: 600px; top: 254px; width: 60px; height: 4px; background: #2f8f93; }
+      .wordmark { position: absolute; left: 598px; top: 274px; font-weight: 700; font-size: 92px;
+        line-height: 0.9; letter-spacing: -0.02em; color: #14181a; }
+      .wordmark .reg { font-size: 26px; vertical-align: super; color: rgba(20,24,26,0.4); font-weight: 400; }
+      .tagline { position: absolute; left: 600px; top: 470px; font-size: 19px; color: #4a4636; max-width: 470px; line-height: 1.35; }
+
+      /* address lines + the postcard line */
+      .lines { position: absolute; left: 600px; top: 532px; width: 470px; }
+      .lines i { display: block; height: 1px; background: rgba(20,24,26,0.18); margin-bottom: 26px; }
+      .place { position: absolute; left: 604px; top: 524px; font-family: "Space Mono", monospace;
+        font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #4a4636; }
+      .wish { position: absolute; left: 604px; top: 552px; font-family: "Caveat", cursive;
+        font-size: 30px; color: #2f8f93; transform: rotate(-2deg); }
+
+      /* stamp + postmark, top-right */
+      .stamp { position: absolute; left: 1006px; top: 46px; width: 122px; height: 146px;
+        background: linear-gradient(150deg, #5fc7cf, #2f9ca0 55%, #e8b860);
+        padding: 6px; filter: drop-shadow(0 3px 5px rgba(20,24,26,0.25)); }
+      .stamp::before { content: ""; position: absolute; inset: -5px; border: 5px dotted #efe9db; border-radius: 2px;
+        -webkit-mask: linear-gradient(#000 0 0); }
+      .stamp-in { width: 100%; height: 100%; border: 1px solid rgba(255,255,255,0.5); position: relative;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 9px; }
+      .stamp-in svg { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); }
+      .stamp-in span { font-family: "Space Mono", monospace; font-size: 8px; letter-spacing: 0.18em; color: #fbf8f0; }
+      .postmark { position: absolute; left: 938px; top: 120px; }
     </style>
   </head>
   <body>
     <div class="card">
-      <svg class="lattice" viewBox="0 0 1200 630" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- vertical rules -->
-        <g stroke="#e8e6df" stroke-width="1" fill="none">
-          <line x1="150" y1="0" x2="150" y2="630"/>
-          <line x1="375" y1="0" x2="375" y2="630"/>
-          <line x1="600" y1="0" x2="600" y2="630"/>
-          <line x1="825" y1="0" x2="825" y2="630"/>
-          <line x1="1050" y1="0" x2="1050" y2="630"/>
-          <!-- gently curving horizontal rings -->
-          <path d="M0 150 Q600 110 1200 150"/>
-          <path d="M0 315 Q600 270 1200 315"/>
-          <path d="M0 480 Q600 435 1200 480"/>
-        </g>
-      </svg>
+      <div class="grain"></div>
       <div class="frame"></div>
-      <div class="corner tl">N 4.17° · E 73.51°</div>
-      <div class="corner tr">
-        <div><span class="dot" style="background:#5fc7cf"></span>MALÉ, MV</div>
-        <div><span class="dot" style="background:#e8b860"></span>GALLE, LK</div>
+
+      <div class="photo">
+        <img src="/img/IMG-059-hero.webp" alt="" />
+        <div class="cap">The Lagoon · Thulusdhoo</div>
       </div>
-      <div class="content">
-        <div class="kicker">A Travelogue</div>
-        <span class="accent-rule"></span>
-        <h1><span class="two">TWO</span><br/>ISLANDS<span class="reg">®</span></h1>
+
+      <div class="head">POST&nbsp;CARD</div>
+      <div class="rule"></div>
+
+      <div class="eyebrow">A TRAVELOGUE</div>
+      <div class="accent-rule"></div>
+      <div class="wordmark">TWO<br />ISLANDS<span class="reg">®</span></div>
+      <div class="tagline">Salt, spice &amp; monsoon light.</div>
+
+      <div class="lines"><i></i><i></i></div>
+      <div class="place">Maldives × Sri Lanka · June 2026</div>
+      <div class="wish">wish you were here —</div>
+
+      <div class="stamp">
+        <div class="stamp-in">
+          <svg width="84" height="60" viewBox="0 0 84 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="58" cy="20" r="9" fill="#f7e4a8"/>
+            <path d="M2 46 q14 -12 28 0 t28 0 t28 0" stroke="#fbf8f0" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M2 53 q14 -10 28 0 t28 0 t28 0" stroke="#fbf8f0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+            <path d="M16 40 q6 -14 14 -16" stroke="#fbf8f0" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
+          </svg>
+          <span>MALDIVES</span>
+        </div>
       </div>
-      <div class="baseline">
-        <span>Salt, Spice &amp; Monsoon Light</span>
-        <span>Maldives × Sri Lanka — June 2026</span>
-      </div>
+
+      <svg class="postmark" width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <path id="pt" d="M 18 64 A 46 46 0 0 1 110 64" />
+          <path id="pb" d="M 22 64 A 42 42 0 0 0 106 64" />
+        </defs>
+        <circle cx="64" cy="64" r="58" fill="none" stroke="#2a2e26" stroke-width="1.6" opacity="0.8"/>
+        <circle cx="64" cy="64" r="46" fill="none" stroke="#2a2e26" stroke-width="1" opacity="0.7"/>
+        <text font-family="Space Mono, monospace" font-size="10.5" letter-spacing="2" fill="#2a2e26" opacity="0.85">
+          <textPath href="#pt" startOffset="50%" text-anchor="middle">MALÉ · GALLE</textPath>
+        </text>
+        <text font-family="Space Mono, monospace" font-size="10" letter-spacing="2" fill="#2a2e26" opacity="0.85">
+          <textPath href="#pb" startOffset="50%" text-anchor="middle">JUN · 2026</textPath>
+        </text>
+        <text x="64" y="61" font-family="Space Mono, monospace" font-size="9" letter-spacing="1" fill="#2a2e26" text-anchor="middle" opacity="0.8">4.17°N</text>
+        <text x="64" y="73" font-family="Space Mono, monospace" font-size="9" letter-spacing="1" fill="#2a2e26" text-anchor="middle" opacity="0.8">73.51°E</text>
+      </svg>
     </div>
   </body>
 </html>
