@@ -18,7 +18,7 @@ const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const NS = "http://www.w3.org/2000/svg";
-const VW = 800, VH = 380, WORLD = 2200, GY = 300; // view, world width, ground line
+const VW = 800, VH = 380, WORLD = 3000, GY = 300; // view, world width, ground line
 
 // side-view vehicles, facing +x (right); rotated to the path tangent
 const VEH: Record<string, string> = {
@@ -28,16 +28,19 @@ const VEH: Record<string, string> = {
 };
 const baseScale: Record<string, number> = { car: 1.5, plane: 1.7, boat: 1.6 };
 
-// the vehicle's hand-drawn route through the scene (world coords)
-const PATH = "M 170 296 L 600 300 C 700 300 720 300 820 286 C 900 270 940 175 1010 150 C 1180 120 1300 120 1410 142 C 1485 162 1520 272 1560 300 L 1880 300 C 1955 300 2005 298 2045 298";
+// the vehicle's hand-drawn route through the scene (world coords).
+// two flight arcs with a Colombo touch-down + taxi between them — the plane
+// lands, rolls along the ground, then climbs again for the Malé leg.
+const PATH = "M 170 296 L 600 300 C 690 300 730 300 770 290 C 880 260 980 165 1090 150 C 1200 135 1300 140 1375 198 C 1420 238 1450 300 1500 300 L 1640 300 C 1730 300 1770 300 1810 290 C 1920 260 2015 165 2120 150 C 2225 135 2320 150 2390 205 C 2425 242 2448 300 2480 300 C 2580 300 2660 300 2740 296 C 2790 293 2830 298 2870 298";
 
-const viaAt = (x: number) => (x < 600 ? "car" : x < 1560 ? "plane" : "boat");
+const viaAt = (x: number) => (x < 600 ? "car" : x < 2480 ? "plane" : "boat");
 
 const LEGENDS: { x: number; t: string }[] = [
   { x: 600, t: "M7/1, GURGAON → DELHI · BY ROAD" },
-  { x: 1230, t: "UL 192 · DELHI → COLOMBO · ≈ 2,570 KM" },
-  { x: 1560, t: "COLOMBO → MALÉ · SRILANKAN · ≈ 760 KM" },
-  { x: 9999, t: "MALÉ → THULUSDHOO · SPEEDBOAT · ≈ 27 KM" },
+  { x: 1460, t: "UL 192 · DELHI → COLOMBO · ≈ 2,570 KM" },
+  { x: 1660, t: "COLOMBO · LAYOVER" },
+  { x: 2480, t: "COLOMBO → MALÉ · SRILANKAN · ≈ 760 KM" },
+  { x: 99999, t: "MALÉ → THULUSDHOO · SPEEDBOAT · ≈ 27 KM" },
 ];
 const legendAt = (x: number) => (LEGENDS.find((l) => x < l.x) ?? LEGENDS[LEGENDS.length - 1]).t;
 
@@ -55,7 +58,7 @@ function build(host: HTMLElement, spec: ReelSpec) {
     const r = (0.5 + Math.random() * 0.9).toFixed(1);
     return `<circle class="reel-star" cx="${x}" cy="${y}" r="${r}" />`;
   });
-  const clouds = repeat(9, (i) => {
+  const clouds = repeat(13, (i) => {
     const x = 120 + i * 230 + (i % 2) * 70;
     const y = 70 + (i % 3) * 46;
     const s = (0.8 + (i % 4) * 0.25).toFixed(2);
@@ -90,14 +93,32 @@ function build(host: HTMLElement, spec: ReelSpec) {
     <g class="reel-runway">${repeat(9, (i) => `<line x1="${612 + i * 30}" y1="309" x2="${628 + i * 30}" y2="309"/>`)}</g>
   </g>`;
 
-  // sea — wavy top from x≈1540 to world end
-  let sea = "M1540,300 ";
-  for (let x = 1540; x <= WORLD; x += 40) sea += `Q ${x + 20},296 ${x + 40},300 `;
-  sea += `L ${WORLD},${VH} L1540,${VH} Z`;
-  const seaSVG = `<path class="reel-sea" d="${sea}" />
-    <g class="reel-line" stroke-width="1">${repeat(10, (i) => `<path d="M${1620 + i * 50},312 q6,-4 12,0"/>`)}</g>`;
+  // Colombo — the layover stop, where flight 1 touches down and taxis
+  const colombo = `<g transform="translate(0,0)">
+    <g class="reel-line">
+      <path d="M1452,300 L1452,272 L1556,272 L1556,300"/>
+      <path d="M1568,300 L1568,236 L1580,236 L1580,300"/>
+      <path d="M1566,236 L1574,228 L1582,236"/>
+    </g>
+    <circle class="reel-beacon" cx="1574" cy="231" r="2.2"/>
+    <g class="reel-runway">${repeat(11, (i) => `<line x1="${1460 + i * 30}" y1="309" x2="${1476 + i * 30}" y2="309"/>`)}</g>
+  </g>`;
 
-  const island = `<g transform="translate(2040,0)">
+  // Malé — flight 2 lands here, the speedboat takes over
+  const male = `<g class="reel-line">
+    <path d="M2372,300 L2372,278 L2456,278 L2456,300"/>
+    <path d="M2466,300 L2466,244 L2478,244 L2478,300"/>
+  </g>
+  <circle class="reel-beacon" cx="2472" cy="240" r="2.2"/>`;
+
+  // sea — wavy top from x≈2460 (the Malé coast) to world end
+  let sea = "M2460,300 ";
+  for (let x = 2460; x <= WORLD; x += 40) sea += `Q ${x + 20},296 ${x + 40},300 `;
+  sea += `L ${WORLD},${VH} L2460,${VH} Z`;
+  const seaSVG = `<path class="reel-sea" d="${sea}" />
+    <g class="reel-line" stroke-width="1">${repeat(10, (i) => `<path d="M${2540 + i * 50},312 q6,-4 12,0"/>`)}</g>`;
+
+  const island = `<g transform="translate(2820,0)">
     <path class="reel-sand" d="M-46,300 Q0,278 46,300 Z"/>
     <g class="reel-line">
       <path d="M-6,298 Q-10,276 -4,258"/>
@@ -109,7 +130,7 @@ function build(host: HTMLElement, spec: ReelSpec) {
 
   const world = `<g class="reel-world" data-world>
     <rect class="reel-ground" x="0" y="${GY}" width="${WORLD}" height="${VH - GY}"/>
-    ${house}${airport}${seaSVG}${island}
+    ${house}${airport}${colombo}${male}${seaSVG}${island}
     <path id="reel-path" d="${PATH}" fill="none" stroke="none"/>
     <g class="reel-trails" data-trails></g>
     <g class="reel-veh" data-veh></g>
