@@ -137,6 +137,7 @@ export const PHOTOS: Record<string, Photo> = Object.fromEntries(
     P("IMG-114", 0.50, 0.45, "A grinning couple selfie, her in red and him in white, the sea in the window behind", 1200 / 1600),
     P("IMG-115", 0.50, 0.45, "Dusk over the reef and lagoon, seen from the room the first evening", 1280 / 960),
     P("IMG-116", 0.50, 0.50, "Takeaway cups hand-lettered Vineet and Priya with little hearts, beside a slice of cake", 1600 / 1200),
+    P("IMG-117", 0.50, 0.40, "Man in a black shirt smiling under the casuarina at night, by the beach restaurant", 1153 / 1280),
   ].map((p) => [p.id, p])
 );
 

@@ -23,13 +23,13 @@ let motionTeardown: (() => void) | null = null;
 export const pageIsOpen = () => pageEl !== null;
 export const currentPageId = () => openId;
 
-function ph(id: string, size: "page" | "hero" = "page"): string {
+function ph(id: string, size: "page" | "hero" = "page", overlay = ""): string {
   const photo = PHOTOS[id];
   const fx = photo ? photo.focal[0] * 100 : 50;
   const fy = photo ? photo.focal[1] * 100 : 50;
   return `<div class="ph" style="background-image:url('${lqip[id] ?? ""}')">
     <img loading="lazy" decoding="async" src="${img(id, size)}" alt="${photo?.alt ?? ""}"
-      style="object-position:${fx}% ${fy}%" onload="this.classList.add('ld')" />
+      style="object-position:${fx}% ${fy}%" onload="this.classList.add('ld')" />${overlay}
   </div>`;
 }
 
@@ -45,6 +45,13 @@ function noteHtml(b: Extract<Block, { type: "note" }>): string {
   if (v === "quote") {
     return `<blockquote class="blk-note note-quote rv"><p>${b.text}</p>${b.kicker ? `<cite class="note-k">${b.kicker}</cite>` : ""}</blockquote>`;
   }
+  if (v === "voice") {
+    // a second hand — Priya's own words, set apart as a quoted letter
+    return `<blockquote class="blk-note note-voice rv"><p>${b.text}</p>${b.kicker ? `<cite class="note-k">${b.kicker}</cite>` : ""}</blockquote>`;
+  }
+  if (v === "footnote") {
+    return `<div class="blk-note note-footnote rv"><span class="fn-mark">†</span><p>${b.text}</p></div>`;
+  }
   return `<aside class="blk-note note-aside rv">${k}<p>${b.text}</p></aside>`;
 }
 
@@ -53,11 +60,18 @@ function blockHtml(b: Block, arts: Artifact[]): string {
     case "text":
       return `<div class="blk-text rv">${b.text}</div>`;
     case "full":
-      return `<figure class="blk-full${b.wide ? " wide" : ""} rv" data-parallax>${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+      // native frames show uncropped, so they skip the cover-crop parallax
+      return `<figure class="blk-full${b.wide ? " wide" : ""}${b.native ? " native" : ""} rv"${b.native ? "" : " data-parallax"}>${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
     case "diptych":
       return `<figure class="blk-diptych rv">${ph(b.imgs[0])}${ph(b.imgs[1])}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
-    case "food":
-      return `<figure class="blk-food rv">${ph(b.img)}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+    case "food": {
+      // a badged plate gets a frame wrapper so the sticker can overhang the photo
+      // edge (the .ph itself clips its contents)
+      const inner = b.badge
+        ? `<div class="food-frame">${ph(b.img)}<span class="food-badge"><span class="fb-stars">★★★★★</span><span class="fb-label">${b.badge}</span></span></div>`
+        : ph(b.img);
+      return `<figure class="blk-food rv">${inner}${b.caption ? `<figcaption>${b.caption}</figcaption>` : ""}</figure>`;
+    }
     case "video":
       return `<figure class="blk-video${b.wide ? " wide" : ""} rv"><div class="ph">
         <video muted loop playsinline preload="metadata" poster="${b.poster}" src="${b.src}"></video>

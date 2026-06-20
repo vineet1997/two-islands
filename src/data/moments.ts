@@ -11,12 +11,13 @@ import type { Artifact } from "./artifacts";
 
 export type Block =
   | { type: "text"; text: string }
-  | { type: "full"; img: string; caption?: string; wide?: boolean }
+  | { type: "full"; img: string; caption?: string; wide?: boolean; native?: boolean } // native = show full frame, uncropped
   | { type: "diptych"; imgs: [string, string]; caption?: string }
-  | { type: "food"; img: string; caption?: string }
+  | { type: "food"; img: string; caption?: string; badge?: string } // badge = a star sticker (top pick)
   | { type: "video"; src: string; poster: string; caption?: string; wide?: boolean }
-  // editorial field note — variant picks the form (margin placard / pull-quote / stat row)
-  | { type: "note"; variant?: "aside" | "quote" | "stat"; kicker?: string; text?: string; stats?: { value: string; label: string }[] }
+  // editorial field note — variant picks the form (margin placard / pull-quote /
+  // stat row / "voice": a second hand, set apart as a quoted letter / "footnote")
+  | { type: "note"; variant?: "aside" | "quote" | "stat" | "voice" | "footnote"; kicker?: string; text?: string; stats?: { value: string; label: string }[] }
   // a photo bound to a note: side-by-side on desktop (flip alternates sides),
   // stacked on mobile; `overlay` floats the note over the image instead
   | { type: "spread"; img: string; kicker: string; text: string; flip?: boolean; overlay?: boolean; caption?: string }
@@ -60,12 +61,12 @@ export const MOMENTS: Moment[] = [
     id: "first-night-ashore", kind: "moment", title: "First Night Ashore",
     chapter: "maldives", dateLabel: "JUN 01", tags: ["NIGHTS", "CULTURE"],
     cover: "IMG-058", accent: "#1c6fa6", slot: { row: 2, col: 0 },
-    intro: "Bags down, sun already gone. The island introduces itself after dark — string lights, hand-painted menus, a surf shop glowing like a lantern.",
+    intro: "Bags down, sun already gone — our first glimpse of Thulusdhoo came after dark. The island introduces itself in light: aesthetic little shops, string lights, hand-painted menus, an art gallery or two, and a surf shop glowing like a lantern.",
     blocks: [
       { type: "full", img: "IMG-001", caption: "Arrival lane, Phandhi Retreat — the first walk on a road made of sand." },
       { type: "full", img: "IMG-115", wide: true, caption: "The view from the room that first evening — reef, lagoon, the day going blue." },
       { type: "diptych", imgs: ["IMG-057", "IMG-019"], caption: "Randhaa Surf Shop and the island's tiniest café — boba, jugo, and bulbs." },
-      { type: "full", img: "IMG-056", wide: true, caption: "Then the moon laid a silver road across the sea, and we went to bed." },
+      { type: "full", img: "IMG-056", native: true, caption: "Then the moon laid a silver road across the sea, and we went to bed." },
     ],
   },
   {
@@ -79,6 +80,7 @@ export const MOMENTS: Moment[] = [
       { type: "spread", img: "IMG-110", kicker: "On the map · Thulusdhoo", text: "This particular blue belongs to Thulusdhoo, in North Malé Atoll. Just past the reef is a surf break called Cokes — named, with zero romance, for the Coca-Cola plant that once bottled here, said to be the only one on Earth that ran on desalinated seawater." },
       { type: "diptych", imgs: ["IMG-039", "IMG-063"], caption: "The lagoon, always framed by something green." },
       { type: "spread", flip: true, img: "IMG-021", kicker: "On the colour", text: "What looks like a hundred blues is really a depth chart. Near-white where it's ankle-deep over sand, jade over seagrass, then a hard line where the floor drops and the colour bruises. None of it is pigment — just light, drowning at different rates." },
+      { type: "note", variant: "voice", kicker: "Priya · learning to float", text: "When I finally stepped in, the sea was beautiful in the rudest way — salt in my nose, water in my ears, balance gone. Somewhere between his lectures on buoyancy and my own resistance, I went from clinging to his neck for dear life to letting go completely, and registered my first float, ever." },
       { type: "note", variant: "quote", kicker: "On the sand", text: "The beach, it turns out, is mostly fish — coral ground up by parrotfish and laid back down as sand." },
       { type: "spread", overlay: true, img: "IMG-042", kicker: "On atolls", text: "“Atoll” is one of the few words English borrowed from Dhivehi — atoḷu. A volcano sinks over ages while its rim of coral grows upward to stay in the light, until only the ring, and its lagoon, remain." },
       { type: "note", variant: "stat", kicker: "On the Maldives", stats: [{ value: "1,190", label: "coral islands" }, { value: "~1%", label: "of it dry land" }, { value: "1 m", label: "above the sea" }], text: "The lowest-lying nation on Earth — unbearably lovely, and on a clock." },
@@ -94,7 +96,8 @@ export const MOMENTS: Moment[] = [
       { type: "full", img: "IMG-093", caption: "Sun high, the lagoon like warm glass." },
       { type: "full", img: "IMG-062", caption: "Then the sky opened — soft, thorough, harmless. The kind of rain you can swim straight through, so we did." },
       { type: "text", text: "Bags and towels tucked dry under the sea-almond trees, nothing to do but float and let it fall. No hurry, no fear — just warm rain on a warm sea." },
-      { type: "full", img: "IMG-026", wide: true, caption: "And then, paid in full — a rainbow dropped straight into the sea." },
+      { type: "full", img: "IMG-026", native: true, caption: "And then, paid in full — a rainbow dropped straight into the sea." },
+      { type: "text", text: "He'd said, almost in passing, that it would be lovely to see a rainbow. Minutes later — indecently on cue — one rose through the last of the rain. Not a miracle, exactly. More like a coincidence with excellent dramatic instincts. Maybe the universe doesn't keep score; maybe it just meets you at your level of audacity." },
     ],
   },
   {
@@ -110,13 +113,11 @@ export const MOMENTS: Moment[] = [
     intro: "A table for two on the sand at Season Paradise — the hotel's beachside restaurant, open to the sea and, that night, nearly all ours. Candles against the breeze, and the kind of evening you plan once and remember always.",
     blocks: [
       { type: "full", img: "IMG-107", caption: "Dressed for it, frangipani behind one ear — golden hour on the jetty first." },
-      { type: "full", img: "IMG-109", caption: "The restaurant: woven lamps, warm light, and barely another soul in it." },
       { type: "text", text: "I'd spent the afternoon plotting with the staff — the candles, the flowers, the little glowing lamp — and they built every last bit of it exactly to instruction." },
-      { type: "diptych", imgs: ["IMG-066", "IMG-067"], caption: "Candlelight, white cloth, sand underfoot." },
-      { type: "full", img: "IMG-108", caption: "And there it was, waiting. She approved." },
+      { type: "diptych", imgs: ["IMG-066", "IMG-108"], caption: "Candlelight, white cloth, sand underfoot." },
       { type: "food", img: "IMG-068", caption: "Frozen strawberry daiquiri, both hands required." },
-      { type: "full", img: "IMG-069", caption: "Him, very pleased — with himself, and the venue." },
-      { type: "text", text: "Great food, a setting we'll never forget, and somehow barely a dent in the bill. The whole night a small, perfect miracle." },
+      { type: "full", img: "IMG-117", caption: "Him, very pleased — with himself, and the venue." },
+      { type: "text", text: "Great food, a setting we'll never forget, and somehow not a bill that would hurt the wallet." },
     ],
   },
   {
@@ -124,17 +125,19 @@ export const MOMENTS: Moment[] = [
     chapter: "maldives", dateLabel: "JUN 03", tags: ["WILDLIFE", "NIGHTS"],
     cover: "IMG-010", liveVideo: "/video/IMG-010-loop.mp4",
     accent: "#6fa8a0", slot: { row: 0, col: 3 },
-    intro: "Walking the jetty after dinner, a shape detached itself from the dark — a reef shark patrolling the lit shallows, slow and unbothered.",
+    intro: "Walking the jetty after dinner, two shapes detached themselves from the dark — a pair of reef sharks patrolling the lit shallows, slow and unbothered.",
     blocks: [
-      { type: "video", src: "/video/IMG-010-page.mp4", poster: "/video/IMG-010-poster.jpg", caption: "Sixteen seconds of the Maldives we didn't plan for." },
-      { type: "text", text: "We stood there long after it had gone, watching the ripples settle back into jetty light." },
+      { type: "video", src: "/video/IMG-010-page.mp4", poster: "/video/IMG-010-poster.jpg", caption: "Sixteen seconds we hadn't planned for — two reef sharks, working the jetty lights." },
+      { type: "text", text: "We stood there long after they'd gone, watching the ripples settle back into jetty light." },
+      { type: "note", variant: "stat", kicker: "On reef sharks", stats: [{ value: "2010", label: "shark fishing banned, nationwide" }, { value: "~30", label: "shark species in Maldivian seas" }, { value: "<1.5 m", label: "a grown blacktip reef shark" }], text: "The whole country is a shark sanctuary — and reef sharks are shy, slight, and want even less to do with you than you do with them." },
+      { type: "text", text: "We found that out for ourselves the next morning, snorkelling straight over the same reef — sharks and all — and it was, anticlimactically and wonderfully, completely fine. No footage survived the trip, which still stings, because the reef had brought everything: coral turned up well past believable, whole schools of fish opening and closing around us, turtles, and little neon things that didn't seem to follow the normal rules. The sharks just slid by, unbothered as ever." },
     ],
   },
   {
     id: "old-male", kind: "moment", title: "Old Malé",
     chapter: "maldives", dateLabel: "JUN 04", tags: ["CULTURE", "FOOD"],
     cover: "IMG-070", accent: "#cfc6b2", slot: { row: 2, col: 3 },
-    intro: "Our flight south wasn't until the afternoon, but the only speedboat off the island left in the morning — so we had hours to kill. A local tipped us off: the same airport boat also runs to Malé town, all day, for the same fare. So instead of waiting around, we got off in the capital.",
+    intro: "Our flight to Sri Lanka wasn't until the afternoon, but the only speedboat off the island left in the morning — so we had hours to kill. A local tipped us off: the same airport boat also runs to Malé town, all day, for the same fare. So instead of waiting around, we got off in the capital.",
     blocks: [
       { type: "note", kicker: "On foot", text: "We got off at the presidential jetty, and that's basically the whole city right there — the government buildings, the Grand Friday Mosque, the old mosque, all a short, sweaty walk apart. Hot and humid, sure, but completely walkable." },
       { type: "artifact", art: { kind: "plan", label: "Central Malé", caption: "Everything sits a short walk from the jetty — the loop we wandered.", spots: [
@@ -147,7 +150,6 @@ export const MOMENTS: Moment[] = [
       ], route: [0, 1, 2, 3, 4, 5] } },
       { type: "note", variant: "stat", kicker: "How small is Malé?", stats: [{ value: "≈2 km²", label: "of island" }, { value: "≈215k", label: "people on it" }, { value: "~20 min", label: "to walk across" }], text: "Among the most densely packed cities anywhere on Earth." },
       { type: "spread", img: "IMG-028", kicker: "The old Friday mosque", text: "Hukuru Miskiy — the oldest mosque in the country, built in 1658 from carved coral. Blocks cut straight from the reef and fitted together without a drop of mortar, every surface lacquered and inscribed. Four centuries on, it's up for UNESCO listing." },
-      { type: "full", img: "IMG-044", caption: "Inside: a corridor of polished time — ebony lattice and lacquered teak." },
       { type: "note", variant: "quote", kicker: "On Maldivian life", text: "A country so short on land that the airport sits on its own island — and the capital, out of room, simply built a new one next door." },
       { type: "food", img: "IMG-071", caption: "Then a genuinely great meal off a Malé side street, before the flight." },
       { type: "note", kicker: "Travel tip · Nala", text: "When it's time to move, get the Nala app — it's the local Uber, and the cabs are good and properly cheap. We took one straight to the airport." },
@@ -159,7 +161,7 @@ export const MOMENTS: Moment[] = [
     id: "villa-in-the-jungle", kind: "moment", title: "The Villa in the Jungle",
     chapter: "srilanka", dateLabel: "JUN 04–06", tags: ["STAY", "PEOPLE"],
     cover: "IMG-047", accent: "#7fa898", slot: { row: 0, col: 4 },
-    intro: "Rest & Digest — a villa set back in the jungle, edged by rice paddy. Secluded but never hard to reach, and a complete change of key after a week on the sand: green instead of blue, birdsong instead of surf.",
+    intro: "Rest & Digest — a villa set back in the jungle, edged by rice paddy. Secluded but never hard to reach, and a complete change of scenery after three nights on the sand — green instead of blue, birdsong instead of surf.",
     blocks: [
       { type: "full", img: "IMG-048", caption: "The garden hummed all day — peacocks somewhere close, monkeys that landed on the roof, resident cats, more birds than we could count. The room looked straight into the green." },
       { type: "diptych", imgs: ["IMG-004", "IMG-047"], caption: "The plunge pool, the colour of bottle glass — honestly the highlight of the whole trip. Same water, rain and sun; we couldn't pick a winner." },
@@ -174,7 +176,7 @@ export const MOMENTS: Moment[] = [
     id: "the-birthday", kind: "moment", title: "The Birthday",
     chapter: "srilanka", dateLabel: "JUN 04–05", tags: ["NIGHTS", "PEOPLE", "FOOD"],
     cover: "IMG-045", accent: "#d4a84a", slot: { row: 2, col: 4 },
-    intro: "Twenty-nine, celebrated across two Sri Lankan nights — a banner smuggled into the villa, midnight pizza on arrival, a proper night out in Galle, and the only acceptable finish: pistachio-and-dark-chocolate gelato on a boardwalk.",
+    intro: "Twenty-nine, celebrated across two Sri Lankan nights — the villa decorated in secrecy, midnight pizza on the first night and pistachio-and-chocolate gelato on the second. Three little pastries from three different bakeries instead of one big cake, an awesome date out, and a long, earned soak in the plunge pool.",
     blocks: [
       { type: "food", img: "IMG-081", caption: "Midnight pizza the moment we reached the villa — cheese-pull engineered for the camera." },
       { type: "full", img: "IMG-082", caption: "Mirror check at the bar, the mural approving from the background." },
@@ -182,6 +184,7 @@ export const MOMENTS: Moment[] = [
       { type: "video", src: "/video/IMG-090-page.mp4", poster: "/video/IMG-090-poster.jpg", wide: true, caption: "Night two, out in Galle — the birthday proper." },
       { type: "full", img: "IMG-084", caption: "Dressed for night two, the banner photobombing from the window." },
       { type: "artifact", art: { kind: "milestone", kicker: "JUN 05 · GALLE", big: "29", ord: "th", sub: "trip around the sun", note: "Crowned at Isle of Gelato — visited twice, no regrets — with the only acceptable order:", flavours: ["Pistachio", "Dark chocolate"] } },
+      { type: "note", variant: "voice", kicker: "Priya · on the chaos", text: "Your birthday arrived through a police stop, failed balloons, broken glass, dead batteries, a missing cake, and a scooter that ran out of petrol. It wasn't perfect. It was a romantic comedy disguised as a birthday — and far better evidence of love than perfection could ever provide." },
       { type: "food", img: "IMG-035", caption: "Cone in hand on a lamp-lit boardwalk. Exactly how a birthday should end." },
     ],
   },
@@ -207,7 +210,7 @@ export const MOMENTS: Moment[] = [
     blocks: [
       { type: "full", img: "IMG-005", caption: "The Kip's own courtyard — white pavilions, potted palms. The vibe and the ambience, every bit as good as the food." },
       { type: "full", img: "IMG-015", caption: "We ordered with a pencil and a clipboard, taking it as seriously as an exam." },
-      { type: "text", text: "The vibe was great, the service was great — but the food was just elevated. From the bread, to the raw gnocchi pastry, to the feta and the olive oil, every single bite was heaven." },
+      { type: "text", text: "The vibe was great, the service was great — but the food was just elevated. From the farinata to the glazed oyster mushrooms to the raw snickers cake, everything was mindblowing." },
       { type: "full", img: "IMG-016", caption: "Priya, the moment a board landed." },
       { type: "food", img: "IMG-051", caption: "Avocado-lime cheesecake on a date crust — the closer." },
       { type: "text", text: "Honestly, this is a must-try even if you're not staying in Ahangama. I'd travel 50, even 80 km for this brunch — it deserves a proper trip. If you're ever in Sri Lanka, The Kip is the one I'd recommend." },
@@ -240,7 +243,7 @@ export const MOMENTS: Moment[] = [
       { type: "full", img: "IMG-087", wide: true, caption: "Even the airport lounge got the treatment." },
       { type: "full", img: "IMG-116", wide: true, caption: "Our names, hearts included — courtesy of a café that asked." },
       { type: "full", img: "IMG-096", caption: "And the whole trip, in one frame." },
-      { type: "text", text: "Two islands, seven days, and a few hundred photographs we'll be retelling for years. — June 2026" },
+      { type: "text", text: "Two islands, seven days, and a few stories we'll be retelling for years. — June 2026" },
     ],
   },
 
@@ -249,7 +252,7 @@ export const MOMENTS: Moment[] = [
     id: "mood-transit", kind: "moment", title: "In Transit", chapter: "maldives",
     dateLabel: "JUN 01 — 07", tags: ["PEOPLE"],
     cover: "IMG-085", accent: "#6c97b8", slot: { row: 0, col: 0 },
-    intro: "Every trip is really two trips: the one you photograph, and the one that gets you there. This is the second one — a 04:00 alarm, a doorstep in Gurgaon, a pink-tailed jet chasing the sun south, and a speedboat that finally traded tarmac for turquoise.",
+    intro: "Every trip is really two trips: the one you photograph, and the one that gets you there. This is the second one. It began with a 04:00 alarm and a cab from DLF Phase 2 to Delhi airport (tip: Refex is the new BluSmart) — then the wonders of engineering we call planes, Delhi to Malé by way of Colombo — then the far more fun swap to a speedboat out to Thulusdhoo, and finally a golf cart for the last hum to the resort.",
     blocks: [
       { type: "artifact", art: { kind: "reel", label: "THE JOURNEY", caption: "Doorstep to the island in one breath — a car, two planes, a boat." } },
       { type: "artifact", art: { kind: "reveal", label: "Travel hack", title: "Two countries, one fare", brief: "We meant to visit the Maldives. We came home having also seen Sri Lanka — for the same money. Tap for the trick →", body: "<p>We were only planning the Maldives. Delhi → Maldives and back came to about <strong>₹38,000</strong>.</p><p>But Delhi → Maldives, three days in Sri Lanka, then home to Delhi cost… <strong>exactly ₹38,000</strong>. We basically paid nothing extra for the flights to a whole second country.</p><p>It's a known hack: when an airline routes you through a layover country — Cathay, Qatar, SriLankan, whoever — a multi-stop itinerary often costs the same as the plain return. So you stop over, actually <em>see</em> your layover country, and turn one trip into two.</p>" } },
@@ -271,18 +274,18 @@ export const MOMENTS: Moment[] = [
     id: "the-food", kind: "moment", title: "Salt & Spice", chapter: "both",
     dateLabel: "JUN 01–07", tags: ["FOOD"],
     cover: "IMG-104", accent: "#c98a3a", slot: { row: 2, col: 1 },
-    intro: "Seven days, two islands, and one running argument: where do we eat next? The Maldives kept us full and happy. Sri Lanka served two of the best meals of our lives. The receipt, roughly in order.",
+    intro: "Seven days, two islands, and one running argument: where do we eat next? The Maldives kept us full and happy. Sri Lanka served two of the best meals of our lives.",
     blocks: [
-      { type: "food", img: "IMG-101", caption: "ONDA · THULUSDHOO — First dinner ashore. A couscous bowl from a tiny café run by the sweetest couple, and desserts fresh enough to forgive the health food." },
-      { type: "diptych", imgs: ["IMG-098", "IMG-103"], caption: "THE NEXUS HUB · THULUSDHOO — The dependable one. A menu that does everything well — we tested it twice." },
-      { type: "diptych", imgs: ["IMG-105", "IMG-100"], caption: "SEASON PARADISE · THULUSDHOO — The date-night dinner. Tofu teriyaki, Thai green curry, and a kitchen that set up candlelight exactly to instruction." },
-      { type: "full", img: "IMG-097", wide: true, caption: "KA BOWL · MALÉ — A pre-flight gamble that paid off: custom bowls, the falafel we'd both been craving, iced tea on the house, and a host who flagged down our airport cab. Go." },
-      { type: "text", text: "Footnote, filed under <em>weirdly excellent</em>: a hotel breakfast somewhere along the way served the best baked beans of my life." },
+      { type: "food", img: "IMG-101", caption: "<a href=\"https://www.google.com/maps/search/Onda+Cafe+Thulusdhoo\" target=\"_blank\" rel=\"noopener\">ONDA</a> · THULUSDHOO — First dinner ashore. A couscous bowl from a tiny café run by the sweetest couple, and desserts fresh enough to forgive the health food." },
+      { type: "diptych", imgs: ["IMG-098", "IMG-103"], caption: "<a href=\"https://www.google.com/maps/search/The+Nexus+Hub+Thulusdhoo\" target=\"_blank\" rel=\"noopener\">THE NEXUS HUB</a> · THULUSDHOO — The dependable one. A menu that does everything well — we tested it twice." },
+      { type: "diptych", imgs: ["IMG-105", "IMG-100"], caption: "<a href=\"https://www.google.com/maps/search/Season+Paradise+Thulusdhoo\" target=\"_blank\" rel=\"noopener\">SEASON PARADISE</a> · THULUSDHOO — The date-night dinner. Tofu teriyaki, Thai green curry, and a kitchen that set up candlelight exactly to instruction." },
+      { type: "full", img: "IMG-097", wide: true, caption: "<a href=\"https://www.google.com/maps/search/KA+Bowl+Male+Maldives\" target=\"_blank\" rel=\"noopener\">KA BOWL</a> · MALÉ — A pre-flight gamble that paid off: custom bowls, the falafel we'd both been craving, iced tea on the house, and a host who flagged down our airport cab. Go." },
+      { type: "note", variant: "footnote", text: "Filed under <em>weirdly excellent</em> — a hotel breakfast somewhere along the way served the best baked beans of my life." },
       { type: "text", text: "And then — Sri Lanka. Greener, kinder to vegetarians, and home to the two meals we still talk about." },
-      { type: "food", img: "IMG-104", caption: "RICE &amp; SPOON · AHANGAMA — A house, a buffet, a revelation. Coconut dal for the first time, the most flavourful eggplant of my life, a little salad on the side. I was, briefly, in heaven." },
-      { type: "food", img: "IMG-099", caption: "CRAVE · AHANGAMA — A green bowl, mostly to atone for what was coming." },
-      { type: "food", img: "IMG-102", caption: "DONNA'S · AHANGAMA — Midnight, takeaway, surprisingly high-grade. (There's a Mirissa branch too, we hear.)" },
-      { type: "text", text: "Two we loved enough to keep elsewhere: the gelato that crowned a birthday, and a brunch worth an 80-km detour — both have their own page." },
+      { type: "food", img: "IMG-104", badge: "chef's kiss", caption: "<a href=\"https://www.google.com/maps/search/Rice+and+Spoon+Ahangama\" target=\"_blank\" rel=\"noopener\">RICE &amp; SPOON</a> · AHANGAMA — A house, a buffet, a revelation. Coconut dal for the first time, the most flavourful eggplant of my life, a little salad on the side. The single best plate of the whole trip — I was, briefly, in heaven." },
+      { type: "food", img: "IMG-099", caption: "<a href=\"https://www.google.com/maps/search/Crave+Ahangama\" target=\"_blank\" rel=\"noopener\">CRAVE</a> · AHANGAMA — A green bowl, mostly to atone for what was coming." },
+      { type: "food", img: "IMG-102", caption: "<a href=\"https://www.google.com/maps/search/Donnas+Ahangama\" target=\"_blank\" rel=\"noopener\">DONNA'S</a> · AHANGAMA — Midnight, takeaway, surprisingly high-grade. (There's a Mirissa branch too, we hear.)" },
+      { type: "text", text: "Two more have pages of their own: a birthday gelato we happily went back for twice — and, a few pages on, a whole page given to a single meal. It was that good." },
     ],
   },
   {

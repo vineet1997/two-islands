@@ -1,8 +1,10 @@
 /**
- * The plan — an illustrated walking map. A stylised town (sea, jetty, a faint
- * street grid) with a little icon for each landmark, joined by the dashed route
- * you actually walked, and a "you are here" at the jetty. Positions are hand-set
- * (normalised 0–1), so it reads like a drawn tourist plan, not a tile map.
+ * The plan — a hand-inked chart of central Malé. The island is drawn as a
+ * wobbling coastline in a wave-hatched sea, each landmark a little illustration
+ * (a gold-domed mosque, a dhoni at the jetty, trees in the park), joined by the
+ * ink trail we actually walked. A roughen filter gives every stroke a drawn,
+ * slightly-shaky hand. Positions are hand-set (normalised 0–1), so it reads like
+ * a kept map, not a tile service.
  */
 import { gsap } from "gsap";
 import { frame } from "./frame";
@@ -10,72 +12,147 @@ import type { Artifact, PlanIcon } from "../../data/artifacts";
 
 type PlanSpec = Extract<Artifact, { kind: "plan" }>;
 
-const W = 360, H = 332, SEA = 56, PADX = 36, LAND_TOP = 72, LAND_H = 224;
+const W = 400, H = 372;
+const ISL = { x: 46, y: 84, w: 308, h: 232 }; // land box the spots map into
+const GOLD = "#e3b15a";
 const REDUCED = typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+const px = (x: number) => ISL.x + x * ISL.w;
+const py = (y: number) => ISL.y + y * ISL.h;
+
+// little hand-drawn illustrations, centred on (0,0), sitting on the ground line ~y=8
 const ICON: Record<PlanIcon, string> = {
-  boat: `<path d="M-7,1 L7,1 L4,5 L-4,5 Z"/><path d="M0,1 L0,-5 L5,-2 Z"/>`,
-  flag: `<line x1="0" y1="6" x2="0" y2="-7"/><path d="M0,-7 L7,-4.5 L0,-2 Z"/>`,
-  gov: `<path d="M-8,-1 L0,-6 L8,-1 Z"/><line x1="-8" y1="6" x2="8" y2="6"/><line x1="-6" y1="-1" x2="-6" y2="5"/><line x1="-2" y1="-1" x2="-2" y2="5"/><line x1="2" y1="-1" x2="2" y2="5"/><line x1="6" y1="-1" x2="6" y2="5"/>`,
-  fish: `<path d="M-5,0 Q-1,-4 5,-3 Q8,-2 8,0 Q8,2 5,3 Q-1,4 -5,0 Z"/><path d="M-5,0 L-9,-3 L-9,3 Z"/><circle cx="5" cy="-0.6" r="0.8"/>`,
-  mosque: `<path d="M-6,6 L-6,1 Q0,-6 6,1 L6,6 Z"/><circle cx="0" cy="-7.4" r="1.5"/>`,
-  trees: `<circle cx="-4" cy="-1" r="3.4"/><line x1="-4" y1="2.4" x2="-4" y2="6"/><circle cx="3.5" cy="0.5" r="3"/><line x1="3.5" y1="3.5" x2="3.5" y2="6.5"/>`,
-  pin: `<path d="M0,6 C-5,0 -5,-6 0,-6 C5,-6 5,0 0,6 Z"/><circle cx="0" cy="-1" r="1.6"/>`,
+  boat: `<path class="carte-shape" d="M-11,3 Q0,8.5 11,3 L8,7 Q0,9.5 -8,7 Z"/>
+    <line class="carte-ink" x1="0" y1="3" x2="0" y2="-12"/>
+    <path class="carte-shape" d="M0.8,-12 Q9,-7.5 7.5,-1.8 L0.8,-1.8 Z"/>`,
+  fish: `<path class="carte-shape" d="M-6,0 Q-1,-5 6,-3.4 Q9,-2.4 9,0 Q9,2.4 6,3.4 Q-1,5 -6,0 Z"/>
+    <path class="carte-ink" d="M-6,0 L-11,-4 M-6,0 L-11,4 M-11,-4 L-11,4"/>
+    <path class="carte-ink" d="M2,-2.2 Q3.2,0 2,2.2"/>
+    <circle class="carte-dot" cx="5.6" cy="-0.8" r="0.9"/>`,
+  flag: `<line class="carte-ink" x1="0" y1="9" x2="0" y2="-10"/>
+    <path class="carte-shape" d="M0,-10 Q5,-9 9.5,-10 Q6.5,-7 9.5,-4.2 Q5,-5.4 0,-4.2 Z"/>
+    <line class="carte-ink" x1="-3.5" y1="9" x2="3.5" y2="9"/>`,
+  gov: `<path class="carte-shape" d="M-10.5,-3 L0,-9.5 L10.5,-3 Z"/>
+    <path class="carte-ink" d="M-9,-3 L-9,7 M-4.5,-3 L-4.5,7 M0,-3 L0,7 M4.5,-3 L4.5,7 M9,-3 L9,7"/>
+    <line class="carte-ink" x1="-12" y1="7.5" x2="12" y2="7.5"/>
+    <line class="carte-ink" x1="0" y1="-9.5" x2="0" y2="-13.5"/>
+    <path class="carte-shape" d="M0,-13.5 L3.4,-12.4 L0,-11.3 Z"/>`,
+  mosque: `<path class="carte-gold-soft" d="M-12,8 L-12,-5 L-9,-8.5 L-6,-5 L-6,8 Z"/>
+    <line class="carte-ink" x1="-9" y1="-8.5" x2="-9" y2="-11.5"/>
+    <circle class="carte-gold" cx="-9" cy="-12.6" r="1.3"/>
+    <path class="carte-shape" d="M-3,8 L-3,-1 L12,-1 L12,8 Z"/>
+    <path class="carte-gold" d="M-3.5,-1 Q-3.5,-10 4.5,-10 Q12.5,-10 12.5,-1 Z"/>
+    <line class="carte-ink" x1="4.5" y1="-10" x2="4.5" y2="-13.6"/>
+    <path class="carte-gold" d="M4.5,-14 a2,2 0 1,1 -1.5,1.1"/>`,
+  trees: `<line class="carte-ink" x1="-5" y1="8" x2="-5" y2="0"/>
+    <circle class="carte-shape" cx="-5" cy="-3.5" r="4.6"/>
+    <line class="carte-ink" x1="4.5" y1="8" x2="4.5" y2="2.5"/>
+    <circle class="carte-shape" cx="4.5" cy="-1" r="3.7"/>
+    <line class="carte-ink" x1="0.6" y1="8" x2="0.6" y2="3.5"/>
+    <circle class="carte-shape" cx="0.6" cy="0.6" r="2.8"/>`,
+  pin: `<path class="carte-shape" d="M0,7 C-5,0 -5,-7 0,-7 C5,-7 5,0 0,7 Z"/>
+    <circle class="carte-dot" cx="0" cy="-1.6" r="1.6"/>`,
 };
 
-const px = (x: number) => PADX + x * (W - 2 * PADX);
-const py = (y: number) => LAND_TOP + y * LAND_H;
+// a smooth ink trail through the walked points (quadratic through each node)
+function trail(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
+    d += ` Q ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+  }
+  const last = pts[pts.length - 1];
+  d += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+  return d;
+}
 
 function build(host: HTMLElement, spec: PlanSpec) {
   const pts = spec.spots.map((s) => ({ x: px(s.x), y: py(s.y) }));
   const route = spec.route ?? spec.spots.map((_, i) => i);
 
-  // sea band with a wavy southern coast
-  let coast = `M0,0 L${W},0 L${W},${SEA} `;
-  for (let x = W; x > 0; x -= 30) coast += `Q ${x - 15},${SEA + 4} ${x - 30},${SEA} `;
-  coast += "Z";
-  const sea = `<path class="plan-sea" d="${coast}" />`;
+  // an irregular, hand-drawn island sitting in the sea
+  const land =
+    "M44,168 C42,118 70,84 132,80 C214,75 300,80 352,94 C374,100 366,158 362,206 " +
+    "C358,268 352,312 298,322 C214,335 108,332 70,314 C36,298 46,212 44,168 Z";
 
-  // faint street grid on the land
-  let streets = `<g class="plan-streets">`;
-  for (let i = 1; i < 7; i++) streets += `<line x1="${PADX + i * 42}" y1="${SEA}" x2="${PADX + i * 42}" y2="${H}" />`;
-  for (let i = 1; i < 5; i++) streets += `<line x1="0" y1="${SEA + i * 56}" x2="${W}" y2="${SEA + i * 56}" />`;
-  streets += `</g>`;
+  // wave hatches scattered through the sea margins
+  const waveAt = [
+    [92, 52], [150, 44], [300, 50], [350, 70], [372, 150], [368, 250],
+    [300, 344], [120, 350], [54, 300], [40, 110], [210, 40], [338, 320],
+  ];
+  const waves = waveAt
+    .map(([x, y]) => `<path class="carte-wave" d="M${x},${y} q3,-3.2 6,0 q3,3.2 6,0" />`)
+    .join("");
 
-  // jetty pier reaching up into the sea
+  // a few wobbling streets across the dense little island
+  const streets = `<g class="carte-streets">
+    <path d="M70,150 Q200,138 348,156" /><path d="M64,212 Q200,224 346,210" />
+    <path d="M150,96 Q142,210 158,316" /><path d="M250,92 Q262,200 250,318" />
+  </g>`;
+
+  // jetty pier reaching up into the sea from the 'you' spot
   const jet = spec.spots.findIndex((s) => s.you);
   const jx = jet >= 0 ? pts[jet].x : W / 2;
-  const pier = `<path class="plan-pier" d="M${jx},${SEA - 1} L${jx},34" /><circle class="plan-pier-tip" cx="${jx}" cy="34" r="2.2" />`;
+  const jy = jet >= 0 ? pts[jet].y : ISL.y;
+  const pier = `<path class="carte-pier" d="M${jx.toFixed(1)},${jy.toFixed(1)} L${jx.toFixed(1)},54" />
+    <line class="carte-pier" x1="${(jx - 4).toFixed(1)}" y1="60" x2="${(jx + 4).toFixed(1)}" y2="60" />`;
 
-  // the walked route (dashed)
-  const dRoute = route.map((i, n) => `${n ? "L" : "M"} ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`).join(" ");
+  // a stray dhoni out at sea, for flavour
+  const dhoni = `<g class="carte-sea-deco" transform="translate(312,40) scale(0.78)">${ICON.boat}</g>`;
 
-  const markers = spec.spots.map((s, i) =>
-    `<g class="plan-spot ${s.you ? "you" : ""}" data-spot="${i}" transform="translate(${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)})">
-      <circle class="plan-base" cx="0" cy="0" r="1.6" />
-      <g class="plan-icon" transform="translate(0,-9)">${ICON[s.icon]}</g>
-    </g>`).join("");
+  const dTrail = trail(route.map((i) => pts[i]));
 
-  const svg = `<svg class="plan-svg" viewBox="0 0 ${W} ${H}" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    ${sea}${streets}${pier}
-    <path class="plan-route" d="${dRoute}" />
-    ${markers}
-    <g class="plan-compass" transform="translate(${W - 24},22)"><line x1="0" y1="7" x2="0" y2="-7"/><path d="M-3,-3 L0,-8 L3,-3"/><text x="0" y="16">N</text></g>
+  const markers = spec.spots.map((s, i) => {
+    const scale = s.icon === "mosque" ? 1.16 : 1;
+    return `<g class="carte-spot ${s.you ? "you" : ""}" data-spot="${i}" transform="translate(${pts[i].x.toFixed(1)},${pts[i].y.toFixed(1)})">
+      <circle class="carte-spot-base" cx="0" cy="0" r="1.8" />
+      <g class="carte-mark" transform="translate(0,-9) scale(${scale})">${ICON[s.icon]}</g>
+    </g>`;
+  }).join("");
+
+  const svg = `<svg class="carte-svg" viewBox="0 0 ${W} ${H}" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <filter id="carteRough" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+    <g filter="url(#carteRough)">
+      ${waves}${dhoni}
+      <path class="carte-land" d="${land}" />
+      <path class="carte-coast" d="${land}" />
+      ${streets}
+      ${pier}
+      <path class="carte-route" d="${dTrail}" />
+      ${markers}
+      <g class="carte-compass" transform="translate(366,40)">
+        <path d="M0,-13 L3,-2 L0,0 L-3,-2 Z" /><path d="M0,13 L2.4,2 L0,0 L-2.4,2 Z" />
+        <path d="M-13,0 L-2,2.4 L0,0 L-2,-2.4 Z" /><path d="M13,0 L2,2.4 L0,0 L2,-2.4 Z" />
+      </g>
+      <g class="carte-scale" transform="translate(40,352)">
+        <path d="M0,0 L62,0 M0,-3 L0,3 M31,-2 L31,2 M62,-3 L62,3" />
+      </g>
+    </g>
+    <text class="carte-compass-n" x="366" y="20" text-anchor="middle">N</text>
+    <text class="carte-scale-t" x="0" y="364" transform="translate(40,0)">0</text>
+    <text class="carte-scale-t" x="62" y="364" text-anchor="end" transform="translate(40,0)">300 m</text>
   </svg>`;
 
-  // HTML labels over the plan
+  // handwritten labels over the chart
   const labels = spec.spots.map((s, i) => {
     const side = s.side ?? (pts[i].x > W / 2 ? "left" : "right");
-    return `<div class="plan-label plan-${side}" data-label="${i}" style="left:${((pts[i].x / W) * 100).toFixed(2)}%;top:${((pts[i].y / H) * 100).toFixed(2)}%">
-      ${s.you ? `<span class="plan-you">You are here</span>` : ""}<span class="plan-name">${s.name}</span>
+    return `<div class="carte-label carte-${side}" data-label="${i}" style="left:${((pts[i].x / W) * 100).toFixed(2)}%;top:${((pts[i].y / H) * 100).toFixed(2)}%">
+      ${s.you ? `<span class="carte-you">you are here</span>` : ""}<span class="carte-name">${s.name}</span>
     </div>`;
   }).join("");
 
   host.innerHTML = frame({
     eyebrow: spec.label ?? "ON FOOT",
-    index: "↥ N",
-    body: `<div class="artplan" style="aspect-ratio:${W} / ${H}">${svg}${labels}</div>`,
+    index: "N ↑",
+    accent: GOLD,
+    body: `<div class="artcarte" style="aspect-ratio:${W} / ${H}">${svg}${labels}</div>`,
     caption: spec.caption,
   });
   host.classList.add("art-ready");
@@ -83,26 +160,47 @@ function build(host: HTMLElement, spec: PlanSpec) {
 
 function play(host: HTMLElement, spec: PlanSpec) {
   const route = spec.route ?? spec.spots.map((_, i) => i);
-  const spot = (i: number) => host.querySelector<SVGGElement>(`[data-spot="${i}"]`);
-  const label = (i: number) => host.querySelector<HTMLElement>(`[data-label="${i}"]`);
+  const coast = host.querySelector<SVGPathElement>(".carte-coast");
+  const trailEl = host.querySelector<SVGPathElement>(".carte-route");
 
   if (REDUCED) {
-    host.querySelector<SVGPathElement>(".plan-route")!.style.opacity = "0.85";
-    host.querySelectorAll<HTMLElement>(".plan-spot, .plan-label").forEach((e) => e.classList.add("in"));
+    if (coast) coast.style.opacity = "1";
+    if (trailEl) trailEl.style.opacity = "0.9";
+    host.querySelectorAll<HTMLElement>(".carte-spot, .carte-label").forEach((e) => e.classList.add("in"));
     return;
   }
 
+  // set up draw-on for the coastline and the route
+  for (const p of [coast, trailEl]) {
+    if (!p) continue;
+    const L = p.getTotalLength();
+    p.style.strokeDasharray = `${L}`;
+    p.style.strokeDashoffset = `${L}`;
+    p.style.opacity = "1";
+  }
+
   const tl = gsap.timeline();
-  tl.from(".plan-sea, .plan-streets, .plan-pier, .plan-pier-tip", { opacity: 0, duration: 0.7 }, 0);
-  tl.fromTo(host.querySelector(".plan-route"), { opacity: 0 }, { opacity: 0.85, duration: 0.9 }, 0.3);
-  // landmarks pop in the order you walked them
+  tl.from(".carte-land", { opacity: 0, duration: 0.7 }, 0);
+  tl.from(".carte-wave, .carte-sea-deco, .carte-streets", { opacity: 0, duration: 0.6, stagger: 0.012 }, 0.1);
+  if (coast) tl.to(coast, { strokeDashoffset: 0, duration: 1.1, ease: "power1.inOut" }, 0.15);
+  tl.from(".carte-pier", { opacity: 0, duration: 0.5 }, 0.6);
+  if (trailEl) tl.to(trailEl, { strokeDashoffset: 0, duration: 1.3, ease: "power1.inOut" }, 0.7);
+
+  // landmarks pop in the order we walked them
   route.forEach((idx, n) => {
-    const at = 0.5 + n * 0.32;
-    const g = spot(idx), l = label(idx);
-    if (g) tl.fromTo(g.querySelector(".plan-icon"), { scale: 0, opacity: 0, transformOrigin: "center bottom" }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(2)" }, at);
-    if (g) tl.fromTo(g.querySelector(".plan-base"), { scale: 0, transformOrigin: "center" }, { scale: 1, duration: 0.3 }, at);
-    if (l) tl.to(l, { opacity: 1, duration: 0.4 }, at + 0.1);
+    const at = 1.0 + n * 0.26;
+    const g = host.querySelector<SVGGElement>(`[data-spot="${idx}"]`);
+    const l = host.querySelector<HTMLElement>(`[data-label="${idx}"]`);
+    if (g) {
+      tl.fromTo(g.querySelector(".carte-mark"), { scale: 0, opacity: 0, transformOrigin: "center bottom" },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.9)" }, at);
+      tl.fromTo(g.querySelector(".carte-spot-base"), { scale: 0, transformOrigin: "center" },
+        { scale: 1, duration: 0.3 }, at);
+    }
+    if (l) tl.to(l, { opacity: 1, duration: 0.45 }, at + 0.12);
   });
+
+  tl.from(".carte-compass, .carte-compass-n, .carte-scale, .carte-scale-t", { opacity: 0, duration: 0.6 }, ">-0.2");
 }
 
 export { build as buildPlan, play as playPlan };

@@ -6,11 +6,13 @@
   --ink-dim: #8a8d86;
   --lagoon: #5fc7cf;
   --amber: #e8b860;
+  --her: #e0978f; /* the second voice — Priya's, a constant warm hue across pages */
   --chapter: #5fc7cf; /* live chapter accent, driven by the gallery's yaw */
   --terra: #a4582f;
   --hairline: rgba(232, 230, 223, 0.18);
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-mono: "Space Mono", ui-monospace, monospace;
+  --font-hand: "Caveat", "Bradley Hand", cursive;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -302,6 +304,41 @@ body {
 .note-quote p { font-family: var(--font-display); font-weight: 500; font-size: clamp(26px, 4.6vw, 46px); line-height: 1.16; letter-spacing: -0.01em; color: var(--ink); }
 .note-quote .note-k { display: block; margin-top: 18px; }
 
+/* voice — a second hand (Priya's own words), set apart as a quoted letter.
+   Uses a constant warm accent (--her) so the visitor learns it as "her" voice. */
+.note-voice {
+  max-width: 36ch; margin: 0 auto; position: relative;
+  padding: 34px 38px 28px;
+  border: 1px solid color-mix(in srgb, var(--her) 32%, transparent);
+  background: color-mix(in srgb, var(--her) 7%, transparent);
+  border-radius: 3px;
+}
+.note-voice::before {
+  content: "\201C"; position: absolute; top: 0.16em; left: 16px;
+  font-family: var(--font-display); font-weight: 500; font-size: 72px; line-height: 1;
+  color: color-mix(in srgb, var(--her) 52%, transparent); pointer-events: none;
+}
+.note-voice p {
+  font-style: italic; font-size: clamp(17px, 2.05vw, 23px); line-height: 1.62;
+  color: var(--ink); text-indent: 0.45em;
+}
+.note-voice .note-k {
+  display: block; margin-top: 18px; text-align: right;
+  color: var(--her); font-style: normal;
+}
+.note-voice a { color: var(--her); }
+
+/* footnote — a small aside marked off from the prose by a rule + dagger */
+.note-footnote {
+  max-width: 48ch; display: flex; gap: 11px; align-items: baseline;
+  padding-top: 20px; border-top: 1px solid var(--hairline);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.02em;
+  color: var(--ink-dim); line-height: 1.75;
+}
+.note-footnote .fn-mark { flex: none; font-size: 13px; color: var(--pm-accent, var(--lagoon)); }
+.note-footnote p { margin: 0; }
+.note-footnote em { font-style: italic; color: var(--ink); }
+
 /* stat — big figures that count up */
 .note-stat { text-align: center; max-width: 620px; }
 .note-stat > .note-k { display: block; margin-bottom: 24px; }
@@ -331,28 +368,44 @@ body {
 
 [data-parallax] .ph img { will-change: transform; }
 
-/* plan — an illustrated walking map */
-.artplan { position: relative; width: 100%; border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; background: linear-gradient(var(--bg-soft), #0a0e11); }
-.plan-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.plan-sea { fill: #0d2024; }
-.plan-streets line { stroke: rgba(232, 230, 223, 0.05); stroke-width: 0.7; }
-.plan-pier { stroke: rgba(232, 230, 223, 0.4); stroke-width: 2.4; stroke-linecap: round; }
-.plan-pier-tip { fill: rgba(232, 230, 223, 0.5); }
-.plan-route { stroke: var(--art-accent); stroke-width: 1.4; fill: none; stroke-linecap: round; stroke-dasharray: 2.5 3.5; opacity: 0; }
-.plan-base { fill: var(--art-accent); }
-.plan-icon { stroke: #f2f1ec; stroke-width: 1.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.plan-icon circle { fill: #f2f1ec; stroke: none; }
-.plan-spot.you .plan-icon { stroke: var(--art-accent); }
-.plan-spot.you .plan-base { r: 2.4; }
-.plan-compass line, .plan-compass path { stroke: var(--ink-dim); stroke-width: 1; fill: none; }
-.plan-compass text { fill: var(--ink-dim); font-family: var(--font-mono); font-size: 8px; text-anchor: middle; }
+/* plan — a hand-inked chart of central Malé */
+.artcarte { position: relative; width: 100%; border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #0e2730, #081519 70%); }
+.carte-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-.plan-label { position: absolute; opacity: 0; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; line-height: 1.3; color: var(--ink); white-space: nowrap; pointer-events: none; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
-.plan-label .plan-name { display: block; }
-.plan-label .plan-you { display: block; color: var(--art-accent); font-size: 7.5px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1px; }
-.plan-right { transform: translate(10px, -50%); text-align: left; }
-.plan-left { transform: translate(calc(-100% - 10px), -50%); text-align: right; }
-.plan-top { transform: translate(-50%, calc(-100% - 12px)); text-align: center; }
+.carte-land { fill: rgba(232, 230, 223, 0.045); }
+.carte-coast { stroke: rgba(242, 239, 230, 0.5); stroke-width: 1.5; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.carte-wave { stroke: rgba(232, 230, 223, 0.17); stroke-width: 1; fill: none; stroke-linecap: round; }
+.carte-streets path { stroke: rgba(232, 230, 223, 0.06); stroke-width: 0.8; fill: none; }
+.carte-pier { stroke: rgba(242, 239, 230, 0.42); stroke-width: 2.2; fill: none; stroke-linecap: round; }
+.carte-sea-deco { opacity: 0.55; }
+
+.carte-route { stroke: var(--art-accent); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.carte-spot-base { fill: rgba(242, 239, 230, 0.7); }
+.carte-spot.you .carte-spot-base { fill: var(--art-accent); r: 2.4; }
+
+/* landmark illustrations */
+.carte-ink { stroke: #f2efe6; stroke-width: 1.25; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.carte-shape { stroke: #f2efe6; stroke-width: 1.2; fill: rgba(232, 230, 223, 0.09); stroke-linejoin: round; stroke-linecap: round; }
+.carte-dot { fill: #f2efe6; stroke: none; }
+.carte-gold { fill: color-mix(in srgb, var(--art-accent) 88%, #3a2410); stroke: var(--art-accent); stroke-width: 1; stroke-linejoin: round; }
+.carte-gold-soft { fill: color-mix(in srgb, var(--art-accent) 20%, transparent); stroke: var(--art-accent); stroke-width: 1.1; stroke-linejoin: round; }
+
+.carte-compass path { fill: rgba(232, 230, 223, 0.32); stroke: rgba(232, 230, 223, 0.5); stroke-width: 0.5; }
+.carte-compass-n { fill: var(--art-accent); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; }
+.carte-scale path { stroke: rgba(232, 230, 223, 0.4); stroke-width: 1; fill: none; }
+.carte-scale-t { fill: rgba(232, 230, 223, 0.45); font-family: var(--font-mono); font-size: 8px; }
+
+.carte-label { position: absolute; opacity: 0; font-family: var(--font-hand); font-weight: 700;
+  font-size: 17px; line-height: 0.95; color: #f4f1e8; white-space: nowrap; pointer-events: none;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75); }
+.carte-label .carte-name { display: block; }
+.carte-label .carte-you { display: block; font-family: var(--font-mono); font-weight: 400; color: var(--art-accent);
+  font-size: 7.5px; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 2px; }
+.carte-right { transform: translate(12px, -50%); text-align: left; }
+.carte-left { transform: translate(calc(-100% - 12px), -50%); text-align: right; }
+.carte-top { transform: translate(-50%, calc(-100% - 12px)); text-align: center; }
+.carte-bottom { transform: translate(-50%, 12px); text-align: center; }
 .plan-bottom { transform: translate(-50%, 12px); text-align: center; }
 
 /* reveal — a clickable card that expands to the full story */
@@ -382,13 +435,44 @@ body {
 .blk-full { display: flex; flex-direction: column; gap: 14px; }
 .blk-full .ph { width: min(100%, 760px); margin: 0 auto; aspect-ratio: 3 / 4; }
 .blk-full.wide .ph { width: 100%; aspect-ratio: 16 / 10; }
+/* native — show the full frame uncropped (capped tall), for photos whose
+   composition is vertical and dies in a cropped box */
+.blk-full.native { align-items: center; }
+.blk-full.native .ph {
+  aspect-ratio: auto; width: auto; height: auto;
+  max-width: min(100%, 680px); max-height: 86vh; margin: 0 auto;
+}
+.blk-full.native .ph img {
+  width: auto; height: auto; max-width: 100%; max-height: 86vh; object-fit: contain;
+}
 .blk-diptych { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .blk-diptych .ph { aspect-ratio: 3 / 4; }
 .blk-diptych .ph:nth-child(2) { transform: translateY(56px); }
 .blk-diptych figcaption { grid-column: 1 / -1; }
 .blk-food { display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .blk-food .ph { width: min(100%, 520px); aspect-ratio: 3 / 4; }
+.blk-video { display: flex; flex-direction: column; gap: 14px; align-items: center; }
 .blk-video .ph { width: min(100%, 640px); margin: 0 auto; aspect-ratio: 9 / 16; }
+
+/* standout plate — a little taped paper note slapped over the photo's corner */
+.food-frame { position: relative; width: min(100%, 520px); }
+.food-frame .ph { width: 100%; }
+.food-badge {
+  position: absolute; top: -19px; right: -15px; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 11px 17px 9px;
+  background: #f3ebdc; color: #241208;
+  transform: rotate(-4deg);
+  box-shadow: 0 11px 24px rgba(0, 0, 0, 0.46);
+}
+.food-badge::before { /* a strip of washi tape holding the note on */
+  content: ""; position: absolute; top: -8px; left: 50%;
+  width: 54px; height: 18px; transform: translateX(-50%) rotate(-2.5deg);
+  background: color-mix(in srgb, var(--her) 55%, #ffffff);
+  opacity: 0.72; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.fb-stars { font-size: 12px; letter-spacing: 1.5px; line-height: 1; color: #c0392b; }
+.fb-label { font-family: var(--font-hand); font-weight: 700; font-size: 22px; line-height: 0.85; color: #241208; }
 .blk-video.wide .ph { width: min(100%, 900px); aspect-ratio: 16 / 9; }
 
 /* ═══════════════ artifact kit ═══════════════ */
@@ -495,7 +579,14 @@ figcaption, .cap {
   font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em;
   color: var(--ink-dim); line-height: 1.7; max-width: 52ch;
 }
-.blk-full figcaption, .blk-food figcaption { margin: 0 auto; text-align: center; }
+.blk-full figcaption, .blk-food figcaption, .blk-video figcaption { margin: 0 auto; text-align: center; }
+/* linked place names in captions (e.g. cafés → their map profile) */
+figcaption a {
+  color: var(--pm-accent, var(--lagoon)); text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  padding-bottom: 1px; transition: opacity 0.2s ease;
+}
+figcaption a:hover { opacity: 0.62; }
 
 /* reveal-on-scroll */
 .rv { opacity: 0; transform: translateY(46px); transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
