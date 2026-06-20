@@ -30,8 +30,8 @@ const manifest = JSON.parse(
 
 const SIZES = [
   { suffix: "tile", width: 880, quality: 70 },
-  { suffix: "page", width: 1100, quality: 74 },
-  { suffix: "hero", width: 1680, quality: 70 },
+  { suffix: "page", width: 1600, quality: 85 },
+  { suffix: "hero", width: 2300, quality: 85 },
 ];
 
 async function exists(p) {
@@ -53,7 +53,9 @@ async function processImage([id, file]) {
     console.warn(`!! missing source: ${file}`);
     return;
   }
-  const base = sharp(src).rotate(); // bake EXIF orientation, strip metadata
+  // bake EXIF orientation, keep the colour (ICC) profile so colours don't shift,
+  // but EXIF/GPS is still dropped (keepIccProfile keeps only the colour profile)
+  const base = sharp(src).rotate().keepIccProfile();
 
   for (const { suffix, width, quality } of SIZES) {
     const out = path.join(IMG_OUT, `${id}-${suffix}.webp`);
