@@ -33,7 +33,6 @@ export function createPreloader(): Preloader {
   const el = document.getElementById("preloader")!;
   const canvas = el.querySelector<HTMLCanvasElement>("#pre-canvas")!;
   const foot = el.querySelector<HTMLElement>(".pre-foot")!;
-  const statusEl = el.querySelector<HTMLElement>(".pre-status")!;
   const ctx = canvas.getContext("2d")!;
 
   let W = 0, H = 0, cx = 0, cy = 0;
@@ -151,8 +150,6 @@ export function createPreloader(): Preloader {
     ctx.globalAlpha = 1;
 
     foot.style.opacity = String(Math.max(0, (p - 0.55) / 0.45) * (1 - exiting));
-    const word = p < 0.34 ? "drifting" : p < 0.72 ? "gathering" : p < 0.99 ? "making landfall" : "two islands";
-    if (statusEl.textContent !== word) statusEl.textContent = word;
   }
 
   (async () => {

@@ -195,11 +195,18 @@ body {
 #pre-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .pre-foot {
   position: absolute; left: 0; right: 0; top: 61%; opacity: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 11px; text-align: center;
 }
-.pre-sub { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.24em; color: var(--ink-dim); text-transform: uppercase; }
-.pre-sub2 { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.18em; color: color-mix(in srgb, var(--ink-dim) 78%, transparent); }
-.pre-status { margin-top: 6px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.26em; color: var(--lagoon); text-transform: uppercase; }
+.pre-sub {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.26em;
+  color: rgba(232, 230, 223, 0.84); text-transform: uppercase;
+}
+.pre-sub2 {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.2em;
+  background: linear-gradient(90deg, var(--lagoon), var(--amber));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
 
 /* ───────────────────────── list view ───────────────────── */
 #list-view {
