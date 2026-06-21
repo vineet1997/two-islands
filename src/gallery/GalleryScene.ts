@@ -36,6 +36,11 @@ const RING_OUTER = ROW_PITCH * 1.5; // outer boundary of the top/bottom row
 const Y_LIMIT = ROW_PITCH + 0.3;
 const ROW_SNAP = [0, ROW_PITCH, -ROW_PITCH];
 const BASE_FOV = MOBILE ? 64 : 50;
+/** cover-distance margin: curved patches bow away from the camera at their
+ *  edges, so the flown card overscans the viewport a touch to stay covering.
+ *  The page-hero FLIP (momentPage) mirrors this, so the WebGL→DOM handoff
+ *  starts at the same size and settles, instead of snapping ~6% smaller. */
+export const COVER_OVERSCAN = 0.94;
 /** grab-to-overview: the camera widens (recedes) while you hold/scroll, so you
  *  navigate from a pulled-back vantage, then eases back in on release */
 const GRAB_FOV = MOBILE ? 71 : 57;
@@ -912,7 +917,7 @@ export class Gallery {
     const dH = card.h / 2 / t;
     const dW = card.w / 2 / (t * this.camera.aspect);
     // tighter margin: curved patches bow away from the camera at their edges
-    return Math.min(dH, dW) * 0.94;
+    return Math.min(dH, dW) * COVER_OVERSCAN;
   }
 
   /** where the card mesh must sit to exactly cover the viewport */
@@ -952,10 +957,15 @@ export class Gallery {
     this.canvas.classList.remove("over");
     this.velYaw = this.velY = 0;
 
-    // upgrade texture for the close-up (photo cards only)
+    // upgrade texture for the close-up (photo cards only). Skip mipmaps and
+    // pre-upload to the GPU (initTexture) so the swap can't stall a frame
+    // mid-fly — the card fills the screen, so there's nothing to mip down to.
     if (!card.m.liveVideo && card.m.cover) {
       this.texLoader.load(img(card.m.cover, "page"), (t) => {
         t.colorSpace = THREE.NoColorSpace;
+        t.generateMipmaps = false;
+        t.minFilter = THREE.LinearFilter;
+        this.renderer.initTexture(t);
         card.mesh.material.uniforms.map.value = t;
       });
     }

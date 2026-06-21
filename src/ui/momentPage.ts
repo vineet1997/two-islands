@@ -7,9 +7,12 @@ import type { Artifact } from "../data/artifacts";
 import { PHOTOS, img } from "../data/photos";
 import { mountArtifacts, artifactSlot } from "./artifacts";
 import { mountPageMotion } from "./pageMotion";
+import { COVER_OVERSCAN } from "../gallery/GalleryScene";
 import lqipRaw from "../data/lqip.json";
 
 const lqip = lqipRaw as Record<string, string>;
+const REDUCED = typeof matchMedia !== "undefined" &&
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
 const root = () => document.getElementById("page-root")!;
 
 let pageEl: HTMLElement | null = null;
@@ -152,8 +155,17 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
   openId = m.id;
 
   if (opts.seamless) {
-    // fast fade masks the micro-reframe between the curved card and the flat hero
+    // fast fade hands off from the WebGL card to the DOM hero
     gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "power1.out" });
+    // FLIP: the hero enters at the flown card's overscanned size (so they match
+    // through the crossfade), then settles to its natural cover once the page is
+    // opaque — turning the old ~6% scale "snap" into a smooth glide.
+    const heroEl = el.querySelector<HTMLElement>(".page-hero img, .page-hero video");
+    if (heroEl && !REDUCED) {
+      gsap.fromTo(heroEl,
+        { scale: 1 / COVER_OVERSCAN },
+        { scale: 1, duration: 0.55, ease: "power3.out", delay: 0.16 });
+    }
   } else {
     gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: "power2.out" });
   }
@@ -164,36 +176,6 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
     { y: 34, opacity: 0 },
     { y: 0, opacity: 1, duration: 0.9, stagger: 0.09, delay: 0.15, ease: "power3.out" }
   );
-
-  // smooth scroll (wheel only; touch stays native)
-  const inner = el.querySelector<HTMLElement>(".page-inner")!;
-  lenis = new Lenis({ wrapper: el, content: inner, duration: 1.15 });
-  rafCb = (t: number) => lenis?.raf(t * 1000);
-  gsap.ticker.add(rafCb);
-
-  // reveals + lazy video play
-  io = new IntersectionObserver(
-    (entries) => {
-      for (const en of entries) {
-        if (en.isIntersecting) {
-          en.target.classList.add("in");
-          const v = en.target.querySelector("video");
-          if (v) { v.play().catch(() => {}); (v as HTMLVideoElement).classList.add("ld"); }
-        } else {
-          const v = en.target.querySelector("video");
-          if (v) (v as HTMLVideoElement).pause();
-        }
-      }
-    },
-    { root: el, threshold: 0.12, rootMargin: "0px 0px -6% 0px" }
-  );
-  el.querySelectorAll(".rv").forEach((n) => io!.observe(n));
-
-  // build + lazily animate any artifacts (maps, milestones…) on scroll-in
-  mountArtifacts(el, arts);
-
-  // image parallax + stat count-ups (scroll-linked; cleaned up on close)
-  motionTeardown = mountPageMotion(el, lenis);
 
   // mark eagerly-loaded images
   el.querySelectorAll<HTMLImageElement>("img").forEach((i) => {
@@ -207,6 +189,44 @@ export async function openPage(m: Moment, opts: { seamless: boolean }): Promise<
     if (e.key === "Escape") location.hash = "";
   };
   window.addEventListener("keydown", escHandler);
+
+  // Defer the heavy body wiring until the hero has painted, so the build can't
+  // stutter the open — smooth scroll, the reveal observer, artifact builds and
+  // the scroll-linked motion all start a frame after the page is on screen.
+  const initBody = () => {
+    if (pageEl !== el) return; // closed (or replaced) before this ran
+
+    // smooth scroll (wheel only; touch stays native)
+    const inner = el.querySelector<HTMLElement>(".page-inner")!;
+    lenis = new Lenis({ wrapper: el, content: inner, duration: 1.15 });
+    rafCb = (t: number) => lenis?.raf(t * 1000);
+    gsap.ticker.add(rafCb);
+
+    // reveals + lazy video play
+    io = new IntersectionObserver(
+      (entries) => {
+        for (const en of entries) {
+          if (en.isIntersecting) {
+            en.target.classList.add("in");
+            const v = en.target.querySelector("video");
+            if (v) { v.play().catch(() => {}); (v as HTMLVideoElement).classList.add("ld"); }
+          } else {
+            const v = en.target.querySelector("video");
+            if (v) (v as HTMLVideoElement).pause();
+          }
+        }
+      },
+      { root: el, threshold: 0.12, rootMargin: "0px 0px -6% 0px" }
+    );
+    el.querySelectorAll(".rv").forEach((n) => io!.observe(n));
+
+    // build + lazily animate any artifacts (maps, milestones…) on scroll-in
+    mountArtifacts(el, arts);
+
+    // image parallax + stat count-ups (scroll-linked; cleaned up on close)
+    motionTeardown = mountPageMotion(el, lenis);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(initBody));
 }
 
 export async function closePage(opts: { instant: boolean }): Promise<void> {

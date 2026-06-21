@@ -81,13 +81,13 @@ async function route() {
       if (pendingFlyId === m.id && gallery.webglOk) {
         pendingFlyId = null;
         await gallery.flyTo(m.id);
+        gallery.setPaused(true); // freeze the wall before the heavy page build
         await openPage(m, { seamless: true });
-        gallery.setPaused(true);
       } else {
         // deeplink or list-view open
         pendingFlyId = null;
-        await openPage(m, { seamless: false });
         if (gallery.webglOk) gallery.setPaused(true);
+        await openPage(m, { seamless: false });
       }
     } else {
       if (pageIsOpen()) {
